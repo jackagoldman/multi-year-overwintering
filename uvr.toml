@@ -1,0 +1,12 @@
+[project]
+name = "multi-year-overwintering"
+
+[dependencies]
+cowplot = "*"
+dplyr = "*"
+ggnewscale = "*"
+ggplot2 = "*"
+ggspatial = "*"
+rnaturalearth = "*"
+rnaturalearthdata = "*"
+sf = "*"
