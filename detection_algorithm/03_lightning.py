@@ -10,8 +10,8 @@ from shapely.geometry import Point
 
 
 IGNITION_FILES = {
-    2024: 'workflow/results/overwintering_2/ignitions_2024.geojson',
-    2025: 'workflow/results/overwintering_2/ignitions_2025.geojson',
+    2024: 'results/ignitions_2024.geojson',
+    2025: 'results/ignitions_2025.geojson',
 }
 
 LIGHTNING_FILES = {

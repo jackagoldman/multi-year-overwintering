@@ -25,9 +25,9 @@ import numpy as np
 import geopandas as gpd
 
 ROAD_DIST_M    = 1000
-IGNITION_PATH  = 'workflow/results/overwintering_2/ignitions_2025.geojson'
+IGNITION_PATH  = 'results/ignitions_2025.geojson'
 ROADS_PATH     = 'data/roads_study_zones_3005.geojson'
-OUT_PATH       = 'workflow/results/overwintering_2/ignitions_2025_roads.csv'
+OUT_PATH       = 'results/ignitions_2025_roads.csv'
 
 ignitions = gpd.read_file(IGNITION_PATH).to_crs('EPSG:3005')
 roads     = gpd.read_file(ROADS_PATH).to_crs('EPSG:3005')

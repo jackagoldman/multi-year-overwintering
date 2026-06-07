@@ -1,18 +1,18 @@
 library(sf)
 library(tidyverse)
 
-OUT_DIR <- 'workflow/results/overwintering_2'
+OUT_DIR <- 'results/'
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
 # ── Load data ──────────────────────────────────────────────────────────────────
-sdd_2024 <- read_csv('workflow/results/intermediate_products/sdd_2024.csv', show_col_types = FALSE)
-sdd_2025 <- read_csv('workflow/results/intermediate_products/sdd_2025.csv', show_col_types = FALSE)
+sdd_2024 <- read_csv('data/snow_dd/sdd_2024.csv', show_col_types = FALSE)
+sdd_2025 <- read_csv('data/snow_dd/sdd_2025.csv', show_col_types = FALSE)
 
 perims_2023 <- st_read('data/processed_fire_perimeters/perims_2023_clipped_3005.shp', quiet = TRUE)
 perims_2024 <- st_read('data/processed_fire_perimeters/perims_2024_clipped_3005.shp', quiet = TRUE)
 perims_2025 <- st_read('data/processed_fire_perimeters/perims_2025_clipped_3005.shp', quiet = TRUE)
 
-hotspots_all <- st_read('data/raw/all_hotspots_2023_2025.geojson', quiet = TRUE) |>
+hotspots_all <- st_read('data/analysis/all_hotspots_2023_2025_night_nh.geojson', quiet = TRUE) |>
   st_transform(3005) |>
   mutate(acq_date = as.Date(acq_date)) # non-conservative hotspots.... would be data/analysis/all_hotspots_2023_2025_night_nh.geojson better? but that would require re-running the fall hotspot candidate analysis to get the clipped version. For now, just load all and filter to fall later.
 
@@ -191,7 +191,7 @@ ignitions_2024 <- get_ignition_points(
   prev_perims = perims_2023_confirmed,   # only confirmed smoldering 2023 fires
   sdd_col     = sdd_2024_mean
 ) |>
-  filter(days_after_sdd >= 0, days_after_sdd <= 50)
+  filter(days_after_sdd >= -5, days_after_sdd <= 60)
 
 ignitions_2025 <- get_ignition_points(
   perims      = perims_2025,
@@ -199,7 +199,7 @@ ignitions_2025 <- get_ignition_points(
   prev_perims = perims_2024_confirmed,   # only confirmed smoldering 2024 fires
   sdd_col     = sdd_2025_mean
 ) |>
-  filter(days_after_sdd >= 0, days_after_sdd <= 50)
+  filter(days_after_sdd >= -5, days_after_sdd <= 60)
 
 # ── Save ───────────────────────────────────────────────────────────────────────
 st_write(ignitions_2024, file.path(OUT_DIR, 'ignitions_2024.geojson'), delete_dsn = TRUE, quiet = TRUE)
