@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"name": "single_23_24_overwinter",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3005" } },
+"features": [
+{ "type": "Feature", "properties": { "fire_id": "2024_G90399", "fire_year": 2024.0, "acq_date": "2024-05-26", "ignition_doy": 147, "sdd_doy": 150.46, "days_after_sdd": -3.46, "n_first_day_hotspots": 4, "dist_to_prev_perim_m": 137.03802580456568, "nearest_prev_fire_id": "2023_G91534" }, "geometry": { "type": "Point", "coordinates": [ 1306844.139337109168991, 1616786.508334940532222 ] } },
+{ "type": "Feature", "properties": { "fire_id": "2024_G90683", "fire_year": 2024.0, "acq_date": "2024-07-04", "ignition_doy": 186, "sdd_doy": 132.26, "days_after_sdd": 53.74, "n_first_day_hotspots": 2, "dist_to_prev_perim_m": 781.27663275732959, "nearest_prev_fire_id": "2023_G90207" }, "geometry": { "type": "Point", "coordinates": [ 1176508.652695253957063, 1601277.739030336029828 ] } },
+{ "type": "Feature", "properties": { "fire_id": "2024_G90741", "fire_year": 2024.0, "acq_date": "2024-07-08", "ignition_doy": 190, "sdd_doy": 192.15, "days_after_sdd": -2.15, "n_first_day_hotspots": 21, "dist_to_prev_perim_m": 0.0, "nearest_prev_fire_id": "2023_G92947" }, "geometry": { "type": "Point", "coordinates": [ 890695.880707593634725, 1588794.167866282863542 ] } }
+]
+}
