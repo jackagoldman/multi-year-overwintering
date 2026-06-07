@@ -1,14 +1,14 @@
-# Overwintering Fire Detection Criteria
+# Multi-year Overwintering Fire Detection Algorithm Criteria
 
-| **Criterion** | **Candidate (Spatial and Temporal Proximity)** | **Confirmed (Spatial Continuity)** |
-|---|---|---|
-| Minimum fall VIIRS hotspot detections within previous-year perimeter (DOY ≥ 213) | ≥ 2 | ≥ 2 |
-| Spring VIIRS hotspot within buffer of previous-year perimeter | ≤ 1000 m | ≤ 1000 m |
-| Spring detection window relative to snow disappearance date (SDD) | SDD to SDD + 50 days | SDD to SDD + 50 days |
-| Spring hotspot distance to current-year fire perimeter | ≤ 1000 m | ≤ 1000 m |
-| Fall-to-spring spatial continuity (distance from last fall hotspot to spring hotspot) | Not required | ≤ 1000 m |
-| Lightning exclusion (CG strike at spring hotspot location prior to detection) | ≤ 7 days excluded | ≤ 7 days excluded |
-| Human ignition exclusion (current-year perimeter fire cause) | FIRE\_CAUSE = Person excluded | FIRE\_CAUSE = Person excluded |
-| Snow disappearance date (SDD) source | MODIS fractional snow cover, per-fire raster mean | MODIS fractional snow cover, per-fire raster mean |
-| VIIRS hotspot pre-filtering | Nighttime only, ≥ medium confidence, scan/track ≤ 0.5 | Nighttime only, ≥ medium confidence, scan/track ≤ 0.5 |
-| Spring hotspot selection method | Hotspot closest to current-year perimeter boundary | Hotspot closest to last fall hotspot location |
+| **Criterion** | **Detection Algorithm** |
+|---|---|
+| Minimum fall VIIRS hotspot detections within previous-year perimeter (DOY ≥ 213) | ≥ 2 detections |
+| Spring VIIRS hotspot within buffer of previous-year perimeter | ≤ 2000 m |
+| Spring detection window relative to snow disappearance date (SDD) | SDD − 5 days to SDD + 60 days |
+| Ignition point selection | First-day hotspot closest to confirmed previous-year perimeter boundary |
+| Lightning exclusion (CG strike within 2 km of ignition point) | Excluded if strike within ± 7 days of ignition |
+| Human ignition exclusion — 2024 | FIRE\_CAUSE = Person excluded |
+| Human ignition exclusion — 2025 | Road proximity ≤ 1000 m excluded |
+| Snow disappearance date (SDD) source | MODIS fractional snow cover, per-fire zonal mean |
+| VIIRS hotspot pre-filtering | Nighttime only, ≥ medium confidence, scan/track ≤ 0.5 |
+| Multi-year chain detection | 2024 fire must have confirmed fall smoldering (≥ 2 hotspots DOY ≥ 213) and a 2025 ignition point within 2000 m of its perimeter |
