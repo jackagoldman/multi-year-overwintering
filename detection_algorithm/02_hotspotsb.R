@@ -58,7 +58,7 @@ get_fall_confirmed <- function(hotspots, perims, min_hotspots = 2) {
   hs_fall <- st_join(
     hotspots |>
       mutate(doy = as.integer(format(acq_date, '%j'))) |>
-      filter(doy >= 213) |>
+      #filter(doy >= 213) |>
       select(acq_date, doy, geometry),
     perims |> select(fire_id, geometry),
     join = st_within,
