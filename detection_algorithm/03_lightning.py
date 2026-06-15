@@ -2,21 +2,27 @@
 # change SPRING_FILES to read ignition points
 import os
 import warnings
+import yaml
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 import xarray as xr
 from shapely.geometry import Point
 
+cfg       = yaml.safe_load(open('config.yml'))
+data_root = cfg['environments'][cfg['environment']]['data_root']
+
+def d(subpath):
+    return os.path.join(data_root, subpath)
 
 IGNITION_FILES = {
-    2024: 'results/ignitions_2024.geojson',
-    2025: 'results/ignitions_2025.geojson',
+    2024: cfg['results']['ignitions_2024'],
+    2025: cfg['results']['ignitions_2025'],
 }
 
 LIGHTNING_FILES = {
-    2024: 'data/raw/lightning/cg_flashes_3hr_0.1-deg_2024.nc',
-    2025: 'data/raw/lightning/cg_flashes_3hr_0.1-deg_2025.nc',
+    2024: d(cfg['data']['lightning']['cg_flashes_2024']),
+    2025: d(cfg['data']['lightning']['cg_flashes_2025']),
 }
 
 LIGHTNING_MAX_DAYS = 7   # days before OR after ignition
@@ -141,14 +147,14 @@ def add_lightning_flag(df, year):
     return df
 
 for year in [2024, 2025]:
-    df = gpd.read_file(f'workflow/results/overwintering_2/ignitions_{year}.geojson')
-    
+    df = gpd.read_file(IGNITION_FILES[year])
+
     # extract lat/lon from geometry for the lightning buffer lookup
     df['ignition_lon'] = df.geometry.to_crs('EPSG:4326').x
     df['ignition_lat'] = df.geometry.to_crs('EPSG:4326').y
-    
+
     df = add_lightning_flag(df, year)
     df.drop(columns='geometry').to_csv(
-        f'workflow/results/overwintering_2/ignitions_{year}_lightning.csv',
+        cfg['results'][f'ignitions_{year}_lightning'],
         index=False
     )
