@@ -13,18 +13,25 @@
 # Run after: 01_hotspots.py
 
 import os
+import yaml
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 import rasterio
 from rasterstats import zonal_stats
 
-OUT_DIR = 'workflow/results/intermediate_products'
+cfg       = yaml.safe_load(open('config.yml'))
+data_root = cfg['environments'][cfg['environment']]['data_root']
+
+def d(subpath):
+    return os.path.join(data_root, subpath)
+
+OUT_DIR = cfg['intermediate']['dir']
 os.makedirs(OUT_DIR, exist_ok=True)
 
 SDD_RASTERS = {
-    2024: 'data/snow_dd/SDD_2024.tif',
-    2025: 'data/snow_dd/SDD_2025.tif',
+    2024: d(cfg['data']['snow_dd']['sdd_raster_2024']),
+    2025: d(cfg['data']['snow_dd']['sdd_raster_2025']),
 }
 
 SDD_LOOKUP = {
@@ -33,7 +40,7 @@ SDD_LOOKUP = {
 }
 
 # ── Load perimeters ────────────────────────────────────────────────────────────
-fires = gpd.read_file('data/analysis/all_fires_processed.geojson')
+fires = gpd.read_file(d(cfg['data']['fires']['all_fires_processed']))
 fires['fire_year'] = pd.to_numeric(fires['fire_year'], errors='coerce')
 
 for year in [2024, 2025]:
@@ -66,7 +73,7 @@ for year in [2024, 2025]:
     ]
 
     out = perims[['fire_id', 'fire_zone', sdd_col]]
-    out.to_csv(os.path.join(OUT_DIR, f'sdd_{year}.csv'), index=False)
+    out.to_csv(cfg['intermediate'][f'sdd_{year}'], index=False)
     print(f"{year}: {len(out)} perimeters  |  "
           f"n_valid={out[sdd_col].notna().sum()}  |  "
           f"mean_sdd={out[sdd_col].mean():.1f}")
