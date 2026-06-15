@@ -1,18 +1,23 @@
 library(sf)
 library(tidyverse)
+library(yaml)
 
-OUT_DIR <- 'results/'
+cfg       <- yaml.load_file('config.yml')
+data_root <- cfg$environments[[cfg$environment]]$data_root
+d         <- function(subpath) file.path(data_root, subpath)
+
+OUT_DIR <- cfg$results$dir
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
 # ── Load data ──────────────────────────────────────────────────────────────────
-sdd_2024 <- read_csv('data/snow_dd/sdd_2024.csv', show_col_types = FALSE)
-sdd_2025 <- read_csv('data/snow_dd/sdd_2025.csv', show_col_types = FALSE)
+sdd_2024 <- read_csv(cfg$intermediate$sdd_2024, show_col_types = FALSE)
+sdd_2025 <- read_csv(cfg$intermediate$sdd_2025, show_col_types = FALSE)
 
-perims_2023 <- st_read('data/processed_fire_perimeters/perims_2023_clipped_3005.shp', quiet = TRUE)
-perims_2024 <- st_read('data/processed_fire_perimeters/perims_2024_clipped_3005.shp', quiet = TRUE)
-perims_2025 <- st_read('data/processed_fire_perimeters/perims_2025_clipped_3005.shp', quiet = TRUE)
+perims_2023 <- st_read(d(cfg$data$perimeters$perims_2023), quiet = TRUE)
+perims_2024 <- st_read(d(cfg$data$perimeters$perims_2024), quiet = TRUE)
+perims_2025 <- st_read(d(cfg$data$perimeters$perims_2025), quiet = TRUE)
 
-hotspots_all <- st_read('data/analysis/all_hotspots_2023_2025_night_nh.geojson', quiet = TRUE) |>
+hotspots_all <- st_read(d(cfg$data$fires$all_hotspots), quiet = TRUE) |>
   st_transform(3005) |>
   mutate(acq_date = as.Date(acq_date)) # non-conservative hotspots.... would be data/analysis/all_hotspots_2023_2025_night_nh.geojson better? but that would require re-running the fall hotspot candidate analysis to get the clipped version. For now, just load all and filter to fall later.
 
@@ -25,7 +30,7 @@ clean_names <- function(df, year) {
   names(df) <- tolower(names(df))
   df <- df |>
     mutate(
-      fire_id  = paste0(fire_year, '_', fire_no),
+      #fire_id  = paste0(fire_year, '_', fire_no),
       geo_cat  = paste0('perim_', substr(as.character(year), 3, 4))
     )
   if (!'fire_cause' %in% names(df)) {
@@ -97,8 +102,14 @@ fall_2024 <- get_fall_confirmed(hotspots_2024, perims_2024)
 fall_2023_last       <- fall_2023$last_hotspots
 perims_2023_confirmed <- fall_2023$confirmed_perims
 
+# save perims_2023_confirmed to intermediate_products for use in 05_overwintering
+st_write(perims_2023_confirmed, cfg$intermediate$perims_2023_confirmed, quiet = TRUE)
+
 fall_2024_last       <- fall_2024$last_hotspots
 perims_2024_confirmed <- fall_2024$confirmed_perims
+
+# save perims_2024_confirmed to intermediate_products for use in 05_overwintering
+st_write(perims_2024_confirmed, cfg$intermediate$perims_2024_confirmed, quiet = TRUE)
 
 
 # ── Ignition point function ────────────────────────────────────────────────────
@@ -202,5 +213,5 @@ ignitions_2025 <- get_ignition_points(
   filter(days_after_sdd >= -5, days_after_sdd <= 60)
 
 # ── Save ───────────────────────────────────────────────────────────────────────
-st_write(ignitions_2024, file.path(OUT_DIR, 'ignitions_2024.geojson'), delete_dsn = TRUE, quiet = TRUE)
-st_write(ignitions_2025, file.path(OUT_DIR, 'ignitions_2025.geojson'), delete_dsn = TRUE, quiet = TRUE)
+st_write(ignitions_2024, cfg$results$ignitions_2024, delete_dsn = TRUE, quiet = TRUE)
+st_write(ignitions_2025, cfg$results$ignitions_2025, delete_dsn = TRUE, quiet = TRUE)
