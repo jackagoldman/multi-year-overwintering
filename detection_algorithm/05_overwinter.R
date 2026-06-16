@@ -1,15 +1,23 @@
 library(sf)
 library(dplyr)
 library(readr)
+library(yaml)
 
-INT_DIR <- 'results/'
-OUT_DIR <- 'results/'
+cfg       <- yaml.load_file('config.yml')
+data_root <- cfg$environments[[cfg$environment]]$data_root
+d         <- function(subpath) file.path(data_root, subpath)
+
+OUT_DIR <- cfg$results$dir
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
 
 # ── Load ignition points ───────────────────────────────────────────────────────
-ignitions_2024 <- st_read(file.path(INT_DIR, 'ignitions_2024.geojson'), quiet = TRUE)
-ignitions_2025 <- st_read(file.path(INT_DIR, 'ignitions_2025.geojson'), quiet = TRUE)
+ignitions_2024 <- st_read(cfg$results$ignitions_2024, quiet = TRUE)
+ignitions_2025 <- st_read(cfg$results$ignitions_2025, quiet = TRUE)
+
+# Load confirmed fall perimeters
+perims_2023_confirmed <- st_read(cfg$intermediate$perims_2023_confirmed, quiet = TRUE)
+perims_2024_confirmed <- st_read(cfg$intermediate$perims_2024_confirmed, quiet = TRUE)
 
 
 # ── Spatial overlap: 2023->2024 ────────────────────────────────────────────────
@@ -78,6 +86,6 @@ single_24_25 <- candidates_24_25 |>
   filter(!nearest_prev_fire_id %in% multiyear_ids)
 
 # ── Save ───────────────────────────────────────────────────────────────────────
-write_csv(multiyear,    file.path(OUT_DIR, 'multiyear_overwinter.csv'))
-st_write(single_23_24, file.path(OUT_DIR, 'single_23_24_overwinter.geojson'), delete_dsn = TRUE)
-st_write(single_24_25, file.path(OUT_DIR, 'single_24_25_overwinter.geojson'), delete_dsn = TRUE)
+write_csv(multiyear,    cfg$results$multiyear_overwinter)
+st_write(single_23_24, cfg$results$single_23_24_overwinter, delete_dsn = TRUE)
+st_write(single_24_25, cfg$results$single_24_25_overwinter, delete_dsn = TRUE)

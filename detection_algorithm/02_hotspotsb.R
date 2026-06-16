@@ -103,13 +103,13 @@ fall_2023_last       <- fall_2023$last_hotspots
 perims_2023_confirmed <- fall_2023$confirmed_perims
 
 # save perims_2023_confirmed to intermediate_products for use in 05_overwintering
-st_write(perims_2023_confirmed, cfg$intermediate$perims_2023_confirmed, quiet = TRUE)
+st_write(perims_2023_confirmed, cfg$intermediate$perims_2023_confirmed, delete_dsn= TRUE, quiet = TRUE)
 
 fall_2024_last       <- fall_2024$last_hotspots
 perims_2024_confirmed <- fall_2024$confirmed_perims
 
 # save perims_2024_confirmed to intermediate_products for use in 05_overwintering
-st_write(perims_2024_confirmed, cfg$intermediate$perims_2024_confirmed, quiet = TRUE)
+st_write(perims_2024_confirmed, cfg$intermediate$perims_2024_confirmed, delete_dsn=TRUE, quiet = TRUE)
 
 
 # ── Ignition point function ────────────────────────────────────────────────────

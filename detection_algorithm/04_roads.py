@@ -21,13 +21,20 @@
 #   road_flag          : True if road_dist_m <= 1000, else False
 
 import os
+import yaml
 import numpy as np
 import geopandas as gpd
 
+cfg       = yaml.safe_load(open('config.yml'))
+data_root = cfg['environments'][cfg['environment']]['data_root']
+
+def d(subpath):
+    return os.path.join(data_root, subpath)
+
 ROAD_DIST_M    = 1000
-IGNITION_PATH  = 'results/ignitions_2025.geojson'
-ROADS_PATH     = 'data/roads_study_zones_3005.geojson'
-OUT_PATH       = 'results/ignitions_2025_roads.csv'
+IGNITION_PATH  = cfg['results']['ignitions_2025']
+ROADS_PATH     = d(cfg['data']['roads']['roads_study_zones'])
+OUT_PATH       = cfg['results']['ignitions_2025_roads']
 
 ignitions = gpd.read_file(IGNITION_PATH).to_crs('EPSG:3005')
 roads     = gpd.read_file(ROADS_PATH).to_crs('EPSG:3005')
