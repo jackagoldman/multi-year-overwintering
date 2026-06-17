@@ -30,7 +30,7 @@ clean_names <- function(df, year) {
   names(df) <- tolower(names(df))
   df <- df |>
     mutate(
-      #fire_id  = paste0(fire_year, '_', fire_no),
+      fire_id  = paste0(fire_year, '_', fire_no),
       geo_cat  = paste0('perim_', substr(as.character(year), 3, 4))
     )
   if (!'fire_cause' %in% names(df)) {

@@ -40,3 +40,25 @@ Our mutli-year chains required three confirmed links:
 3. A 2025 fire whose ignition is within XXXXm of that same 2024 perimeter
 
 The chain is then identified by joining the 2023->2024 and 2024->2025 candidate tables on the 2024 `fire_id`. Fires that overwintered exactly once and are not part of a chain are classified as single-year overwinters. 
+
+# In place overwinter detection algorithm
+
+The in-place overwinter detection algorithm identifies cases where a 2023 fire perimeter shows direct evidence of re-activation in spring 2024 and/or spring 2025. Reactivation is defined by VIIRS hotspots reappearing *within the original burn perimeter* rather than at the boundary of a new fire. This is complementary to the Scholten-derived detection algorithm above, which tracks overwintering through new fire ignitions near previous-year perimeter edges. The two algorithms capture different expressions of overwintering: the Scholten approach detects spread from a fall smouldering fire that travelled to a new burn area, while the in-place approach detects re-activation within the original footprint.
+
+## Step 1: Spring hotspot detection within 2023 perimeters (06a_spring_hotspots.R)
+
+For each 2023 fire perimeter, we extract all VIIRS hotspots from 2024 that fall spatially within the perimeter boundary using a within-join. Because the existing SDD lookup tables (`sdd_2024.csv`, `sdd_2025.csv`) only contain entries for same-year fire perimeters, we extract mean snow disappearance date for each 2023 perimeter directly from the MODIS SDD rasters (`SDD_2024.tif`, `SDD_2025.tif`) using zonal statistics via `terra::extract()`. This gives a per-perimeter snowmelt reference date for each spring year.
+
+Hotspots are retained if they fall within the temporal window of -5 to 60 days after SDD (matching the temporal filter applied in the Scholten-derived algorithm; the -5 day lower bound accounts for MODIS uncertainty in SDD estimation). A lightning exclusion is then applied: for each candidate hotspot, we query the CLDN 3-hourly lightning grid for the earliest CG strike within a 2 km buffer. Hotspots are excluded if a strike occurred within ±7 days of detection. To avoid loading the full continental lightning grid into memory, the NetCDF is subset to the bounding box of the candidate hotspots before reading. Qualifying hotspots are saved as an intermediate GeoJSON (`spring_hotspots_2024_in_2023_perims.geojson`) for use in Step 2.
+
+## Step 2: Multi-year chain detection via spatial buffering (06b_overwintering_chains.R)
+
+Each qualifying spring 2024 hotspot from Step 1 is buffered by 1000 m (the default buffer distance, configurable via `params.buffer_m` in `config.yml` for sensitivity analysis). We then search for spring 2025 VIIRS hotspots that fall within any of these buffered areas. The 1000 m buffer allows for modest spatial drift in the re-activation signal across winters. The same SDD temporal window (-5 to 60 days) and lightning exclusion criteria are applied to 2025 hotspot candidates, using the 2023 perimeter as the spatial anchor for SDD extraction.
+
+## Output
+
+Two outputs are produced:
+
+**Raw chains** (`inplace_overwintering_perimeter_chains.csv`): one row per unique (2023 perimeter, 2024 hotspot, 2025 hotspot) combination, retaining hotspot IDs, acquisition dates, days-after-SDD values, and the number of days between first 2024 and first 2025 detection. This is useful for inspecting individual hotspot linkages.
+
+**Per-fire summary** (`inplace_overwintering_perimeter_chains_summary.csv`): one row per 2023 fire perimeter. Because multiple VIIRS hotspots are commonly detected on the same day within a perimeter — reflecting the spatial extent of smouldering rather than independent ignition events — the summary collapses all detections to the fire level. For each year, it reports the first detection date and its timing relative to SDD (`first_acq_date`, `days_after_sdd_first`), the number of unique detection dates as a measure of persistence (`n_hotspot_days`), and the total hotspot count as a proxy for spatial extent and intensity (`n_hotspots`). The flag `is_multiyear` distinguishes fires with qualifying hotspots in both 2024 and 2025 from those with 2024 activity only (single-year in-place overwinters).
