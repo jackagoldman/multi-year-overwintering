@@ -9,16 +9,22 @@ library(ggnewscale)
 library(cowplot)
 library(rnaturalearth)
 library(rnaturalearthdata)
+library(yaml)
+
+cfg       <- yaml.load_file('../config.yml')
+data_root <- cfg$environments[[cfg$environment]]$data_root
+d         <- function(subpath) file.path(data_root, subpath)
+
 ```
 
 
 # Figure 1 - Map of BC fire centres and fire perimeters for 2023-2025
 ```{r}
-fire_centres_path <- "data/raw/BC_Fire_Centres/DRP_MOF_FIRE_CENTRES_SP/DRPMFFRCNT_polygon.shp"
+fire_centres_path <- d(cfg$data$plotting$fire_centres)
  
-hist_fires_path   <- "data/raw/BC_Fire_Perimeters_Historical/PROT_HISTORICAL_FIRE_POLYS_SP/H_FIRE_PLY_polygon.shp"
+hist_fires_path   <- d(cfg$data$plotting$hist_fires)
  
-curr_fires_path   <- "data/raw/BC_Fire_Perimeters_2025/PROT_CURRENT_FIRE_POLYS_SP/C_FIRE_PLY_polygon.shp"
+curr_fires_path   <- d(cfg$data$plotting$curr_fires)
  
 ```
 
@@ -258,16 +264,14 @@ ggsave(
 
 
 ```{r}
-hist_fires_path  <- "data/raw/BC_Fire_Perimeters_Historical/PROT_HISTORICAL_FIRE_POLYS_SP/H_FIRE_PLY_polygon.shp"
-curr_fires_path  <- "data/raw/BC_Fire_Perimeters_2025/PROT_CURRENT_FIRE_POLYS_SP/C_FIRE_PLY_polygon.shp"
-study_zones_path <- "data/study_aoi/study_firezones.shp"
+
+study_zones_path <- d(cfg$data$plotting$study_zones)
  
 ```
 
 
 ```{r}
-hist_fires  <- st_read(hist_fires_path,  quiet = TRUE)
-curr_fires  <- st_read(curr_fires_path,  quiet = TRUE)
+
 study_zones <- st_read(study_zones_path, quiet = TRUE)
 ```
 
@@ -1264,4 +1268,273 @@ library(svglite)
 svglite('visualizations/maps/legend_2.svg', width = 12, height = 8)
 print(p_5)
 dev.off()
+```
+
+# Figure 4 - in place overwinter
+2023 - perimeter
+2024, 2025 hotspots
+fire zone background
+
+```{r}
+fires_2023 <- st_read(d(cfg$data$perimeters$perims_2023))
+hotspots_2024_2023 <- st_read(file.path('..', cfg$intermediate$spring_hotspots_2024_in_2023))
+hotspots_2025_2024 <- st_read(file.path('..', cfg$results$spring_hotspots_2025_in_chains))
+multiyear <- readr::read_csv(file.path('..', cfg$results$overwintering_perimeter_chains_summary)) |> 
+  filter(is_multiyear == TRUE)
+
+# Combine hotspot datasets — add a year label column to each first
+hotspots_2024_2023 <- hotspots_2024_2023 %>% mutate(year_label = "2024")
+hotspots_2025_2024 <- hotspots_2025_2024 %>% mutate(year_label = "2025")
+hotspots_all <- bind_rows(hotspots_2024_2023, hotspots_2025_2024)
+
+# filter hotspots where fire_id_2023 is in multiyear chains — these are the ones that are in the study area and relevant to the map
+hotspots_all <- hotspots_all %>%
+  filter(fire_id_2023 %in% multiyear$fire_id_2023)
+```
+
+```{r}
+study_bbox <- st_bbox(study_zones)
+pad <- 60000
+xlim_bc <- c(study_bbox["xmin"] - pad, study_bbox["xmax"] + pad)
+ylim_bc <- c(study_bbox["ymin"] - pad, study_bbox["ymax"] + pad)
+```
+
+```{r}
+fire_colours <- c(
+  "2023" = "#FFD966"
+)
+
+hotspot_colours <- c(
+  "2024" = "#3079e0",
+  "2025" = "#930cb8"
+)
+
+zone_colours <- c(
+  "Fort St. John Fire Zone" = "#E8D0E8",
+  "Fort Nelson Fire Zone"   = "#C8E0C8"
+)
+```
+
+```{r}
+figure_4 <- ggplot() +
+
+  # Study zones
+  geom_sf(
+    data      = study_zones,
+    aes(fill  = MFFRZNNM),
+    colour    = "grey60",
+    linewidth = 0.5,
+    alpha     = 0.6
+  ) +
+  scale_fill_manual(
+    name   = "Fire Zones",
+    values = zone_colours,
+    guide  = guide_legend(
+      order        = 3,
+      override.aes = list(colour = "grey60", linewidth = 0.3, alpha = 0.8)
+    )
+  ) +
+
+  new_scale_fill() +
+
+  # 2023 fire perimeters
+  geom_sf(
+    data      = fires_2023,
+    aes(fill  = as.character(FIRE_YEAR)),
+    colour    = NA,
+    alpha     = 0.9
+  ) +
+  scale_fill_manual(
+    name   = "Perimeters",
+    values = fire_colours,
+    labels = c("2023 perimeters"),
+    guide  = guide_legend(
+      order        = 1,
+      override.aes = list(colour = NA)
+    )
+  ) +
+
+  new_scale_fill() +           # <-- this was missing
+
+  # 2024 & 2025 hotspots
+  # 2024 & 2025 hotspots — convert to coords for geom_point
+  geom_point(
+    data = hotspots_all %>% 
+             mutate(x = st_coordinates(.)[,1],
+                    y = st_coordinates(.)[,2]) %>%
+             st_drop_geometry(),
+    aes(x = x, y = y, colour = year_label),
+    fill   = NA,
+    shape  = 21,     # hollow circle
+    size   = 2,
+    stroke = 0.6
+  ) +
+  scale_colour_manual(
+    name   = "Hotspots",
+    values = c("2024" = "#3079e0",
+               "2025" = "#930cb8"),
+    labels = c("2024 hotspots", "2025 hotspots"),
+    guide  = guide_legend(
+      order        = 2,
+      override.aes = list(shape = 21, fill = NA, size = 2, stroke = 0.6)
+    )
+  ) +
+
+  # Zone name labels
+  geom_sf_label(
+    data          = study_zones,
+    aes(label     = MFFRZNNM),
+    size          = 3,
+    colour        = "grey30",
+    fill          = alpha("white", 0.6),
+    label.size    = 0,
+    label.padding = unit(0.15, "lines")
+  ) +
+
+  annotation_north_arrow(
+    location    = "br",
+    which_north = "true",
+    pad_x       = unit(4, "in"),
+    pad_y       = unit(1.2, "in"),
+    style       = north_arrow_fancy_orienteering(
+      fill      = c("grey30", "white"),
+      line_col  = "grey30",
+      text_col  = "grey30",
+      text_size = 8
+    )
+  ) +
+  annotation_scale(
+    location   = "br",
+    width_hint = 0.25,
+    pad_x      = unit(4, "in"),
+    pad_y      = unit(0.95, "in"),
+    text_cex   = 0.7,
+    line_col   = "grey30",
+    text_col   = "grey30"
+  ) +
+
+  coord_sf(
+    xlim   = xlim_bc,
+    ylim   = ylim_bc,
+    expand = FALSE
+  ) +
+
+  theme_void(base_size = 11) +
+  theme(
+    plot.title           = element_text(face = "bold", size = 13,
+                                        margin = margin(b = 6), hjust = 0),
+    plot.caption         = element_text(colour = "grey50", size = 8,
+                                        hjust = 1, margin = margin(t = 6)),
+    plot.margin          = margin(12, 12, 12, 12),
+    plot.background      = element_rect(fill = "transparent", colour = NA),
+    panel.background     = element_rect(fill = "transparent", colour = NA),
+    legend.position      = c(0.25, 0.45),
+    legend.justification = c("left", "top"),
+    legend.background    = element_rect(fill = "white", colour = NA, linewidth = 0),
+    legend.title         = element_text(face = "bold", size = 9),
+    legend.text          = element_text(size = 8),
+    legend.spacing.y     = unit(0.15, "cm"),
+    legend.key.size      = unit(0.45, "cm"),
+    legend.box           = "vertical",
+    legend.box.spacing   = unit(0.1, "cm")
+  )
+
+figure_4
+```
+
+
+```{r}
+library(patchwork)
+library(grid)
+
+# Define the zoom bbox around the NE cluster — adjust these to taste
+# Zoom bbox — targeting the NE cluster (top-right of your map)
+hotspot_bbox <- st_bbox(hotspots_all)
+pad_inset <- 10000   # metres padding around hotspot extent
+
+zoom_xlim <- c(hotspot_bbox["xmin"] - pad_inset, hotspot_bbox["xmax"] + pad_inset)
+zoom_ylim <- c(hotspot_bbox["ymin"] - pad_inset, hotspot_bbox["ymax"] + pad_inset)
+# Build the inset plot — same layers, just zoomed in
+inset <- ggplot() +
+
+  geom_sf(
+    data      = study_zones,
+    aes(fill  = MFFRZNNM),
+    colour    = "grey60",
+    linewidth = 0.3,
+    alpha     = 0.6
+  ) +
+  scale_fill_manual(values = zone_colours, guide = "none") +
+
+  new_scale_fill() +
+
+  geom_sf(
+    data      = fires_2023,
+    aes(fill  = as.character(FIRE_YEAR)),
+    colour    = NA,
+    alpha     = 0.9
+  ) +
+  scale_fill_manual(values = fire_colours, guide = "none") +
+
+  geom_point(
+    data = hotspots_all %>%
+             mutate(x = st_coordinates(.)[,1],
+                    y = st_coordinates(.)[,2]) %>%
+             st_drop_geometry(),
+    aes(x = x, y = y, colour = year_label),
+    fill   = NA,
+    shape  = 21,
+    size   = 2,
+    stroke = 0.6
+  ) +
+  scale_colour_manual(
+    values = c("2024" = "#3079e0", "2025" = "#930cb8"),
+    guide  = "none"
+  ) +
+
+  # Red box outline to show zoom extent (optional — remove if you don't want it)
+  annotate("rect",
+    xmin = zoom_xlim[1], xmax = zoom_xlim[2],
+    ymin = zoom_ylim[1], ymax = zoom_ylim[2],
+    colour = "red", fill = NA, linewidth = 0.5
+  ) +
+
+  coord_sf(
+    xlim   = zoom_xlim,
+    ylim   = zoom_ylim,
+    expand = FALSE
+  ) +
+
+  theme_void() +
+  theme(
+    panel.border     = element_rect(colour = "grey30", fill = NA, linewidth = 0.8),
+    plot.background  = element_rect(fill = "white", colour = NA)
+  )
+
+# Add a red rectangle on the main map showing where the inset is
+figure_4_with_box <- figure_4 +
+  annotate("rect",
+    xmin = zoom_xlim[1], xmax = zoom_xlim[2],
+    ymin = zoom_ylim[1], ymax = zoom_ylim[2],
+    colour = "red", fill = NA, linewidth = 0.8
+  )
+
+# Compose with patchwork — inset placed top-right
+figure_4_final <- figure_4_with_box | inset +
+  plot_layout(widths = c(2, 1))   # main map twice as wide as inset
+
+figure_4_final
+```
+
+save as svg
+
+```{r}
+ggsave(
+  filename = 'maps/figure_4_overwintering.svg',
+  plot     = figure_4_final,
+  width    = 12,
+  height   = 8,
+  units    = 'in',
+  device   = svglite::svglite
+)
 ```
