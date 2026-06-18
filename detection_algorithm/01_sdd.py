@@ -39,7 +39,7 @@ SDD_LOOKUP = {
     'Fort Nelson Fire Zone':   {2024: 165.14, 2025: 167.72},
 }
 
-# ── Load perimeters ────────────────────────────────────────────────────────────
+#  Load perimeters 
 fires = gpd.read_file(d(cfg['data']['fires']['all_fires_processed']))
 fires['fire_year'] = pd.to_numeric(fires['fire_year'], errors='coerce')
 

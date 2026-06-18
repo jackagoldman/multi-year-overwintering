@@ -17,7 +17,7 @@ LIGHTNING_WINDOW   <- cfg$params$lightning_window_days
 LIGHTNING_BUFFER_M <- cfg$params$lightning_buffer_m
 
 
-# ── Lightning exclusion helper ─────────────────────────────────────────────────
+#  Lightning exclusion helper ─
 # Returns a logical vector (length = nrow(hotspots_sf)):
 #   TRUE  → lightning strike within buffer_m and window_days → exclude
 #   FALSE → keep
@@ -104,7 +104,7 @@ check_lightning <- function(hotspots_sf, nc_path, buffer_m, window_days) {
 }
 
 
-# ── Load 2023 perimeters ───────────────────────────────────────────────────────
+#  Load 2023 perimeters ─
 clean_names <- function(df, year) {
   names(df) <- tolower(names(df))
   df <- df |>
@@ -125,13 +125,13 @@ perims_2023 <- st_read(d(cfg$data$perimeters$perims_2023), quiet = TRUE) |>
   rename_with(tolower) |> clean_names(2023) |> 
   select(fire_id, geometry)
 
-# ── Extract mean SDD 2024 per 2023 perimeter ──────────────────────────────────
+#  Extract mean SDD 2024 per 2023 perimeter 
 sdd_rast  <- rast(d(cfg$data$snow_dd$sdd_raster_2024))
 perims_v  <- project(vect(perims_2023), crs(sdd_rast))
 sdd_vals  <- terra::extract(sdd_rast, perims_v, fun = mean, na.rm = TRUE)
 perims_2023$sdd_2024 <- sdd_vals[, 2]
 
-# ── Load 2024 hotspots ─────────────────────────────────────────────────────────
+#  Load 2024 hotspots ─
 hotspots_2024 <- st_read(d(cfg$data$fires$all_hotspots), quiet = TRUE) |>
   filter(year == 2024) |>
   st_transform(3005) |>
@@ -141,7 +141,7 @@ hotspots_2024 <- st_read(d(cfg$data$fires$all_hotspots), quiet = TRUE) |>
   ) |>
   select(acq_date, doy, geometry)
 
-# ── Spatial join: 2024 hotspots within 2023 perimeters ────────────────────────
+#  Spatial join: 2024 hotspots within 2023 perimeters 
 hs_in_perims <- st_join(
   hotspots_2024,
   perims_2023 |> select(fire_id_2023 = fire_id, sdd_2024, geometry),
@@ -149,34 +149,28 @@ hs_in_perims <- st_join(
   left = FALSE
 )
 
-cat("2024 hotspots inside 2023 perimeters:", nrow(hs_in_perims), "\n")
 
-# ── SDD filter: -5 to 60 days after snow melt ─────────────────────────────────
+#  SDD filter: -5 to 60 days after snow melt ─
 hs_spring <- hs_in_perims |>
   mutate(days_after_sdd = doy - sdd_2024) |>
   filter(days_after_sdd >= SDD_MIN, days_after_sdd <= SDD_MAX) |>
   mutate(hotspot_id_2024 = paste0('hs24_', row_number()))
 
-cat("After SDD filter (days_after_sdd", SDD_MIN, "to", SDD_MAX, "):", nrow(hs_spring), "\n")
 
-# ── Lightning exclusion ────────────────────────────────────────────────────────
+#  Lightning exclusion 
 if (nrow(hs_spring) > 0) {
-  cat("Running lightning check...\n")
   lightning_flag <- check_lightning(
     hotspots_sf = hs_spring,
     nc_path     = d(cfg$data$lightning$cg_flashes_2024),
     buffer_m    = LIGHTNING_BUFFER_M,
     window_days = LIGHTNING_WINDOW
   )
-  cat("Lightning-flagged (excluded):", sum(lightning_flag), "\n")
   hs_spring <- hs_spring[!lightning_flag, ]
 }
 
-cat("Qualifying spring 2024 hotspots:", nrow(hs_spring), "\n")
 
-# ── Save ───────────────────────────────────────────────────────────────────────
+#  Save
 hs_out <- hs_spring |>
   select(hotspot_id_2024, fire_id_2023, acq_date, doy, sdd_2024, days_after_sdd, geometry)
 
 st_write(hs_out, cfg$intermediate$spring_hotspots_2024_in_2023, delete_dsn = TRUE, quiet = TRUE)
-cat("Saved:", cfg$intermediate$spring_hotspots_2024_in_2023, "\n")

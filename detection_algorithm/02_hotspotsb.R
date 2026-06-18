@@ -9,7 +9,7 @@ d         <- function(subpath) file.path(data_root, subpath)
 OUT_DIR <- cfg$results$dir
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
-# ── Load data ──────────────────────────────────────────────────────────────────
+#  Load data 
 sdd_2024 <- read_csv(cfg$intermediate$sdd_2024, show_col_types = FALSE)
 sdd_2025 <- read_csv(cfg$intermediate$sdd_2025, show_col_types = FALSE)
 
@@ -25,7 +25,7 @@ hotspots_2023 <- hotspots_all |> filter(year == 2023)
 hotspots_2024 <- hotspots_all |> filter(year == 2024)
 hotspots_2025 <- hotspots_all |> filter(year == 2025)
 
-# ── Clean perimeter names ──────────────────────────────────────────────────────
+#  Clean perimeter names 
 clean_names <- function(df, year) {
   names(df) <- tolower(names(df))
   df <- df |>
@@ -47,7 +47,7 @@ perims_2025 <- clean_names(perims_2025, 2025)
 perims_2024 <- perims_2024 |> left_join(sdd_2024, by = 'fire_id')
 perims_2025 <- perims_2025 |> left_join(sdd_2025, by = 'fire_id')
 
-# ── Build fall 2023/2024 last hotspots ──────────────────────────────────────────────
+#  Build fall 2023/2024 last hotspots 
 # Last detected fall hotspot per 2023 fire (DOY >= 213, Aug 1 onward).
 # This is where the fire was confirmed smoldering before winter dormancy.
 # Used as the spatial reference for finding overwintering 2024 ignitions.
@@ -112,7 +112,7 @@ perims_2024_confirmed <- fall_2024$confirmed_perims
 st_write(perims_2024_confirmed, cfg$intermediate$perims_2024_confirmed, delete_dsn=TRUE, quiet = TRUE)
 
 
-# ── Ignition point function ────────────────────────────────────────────────────
+#  Ignition point function 
 #
 #' Get ignition points for fires in a given year.
 #'
@@ -212,6 +212,6 @@ ignitions_2025 <- get_ignition_points(
 ) |>
   filter(days_after_sdd >= -5, days_after_sdd <= 60)
 
-# ── Save ───────────────────────────────────────────────────────────────────────
+#  Save ─
 st_write(ignitions_2024, cfg$results$ignitions_2024, delete_dsn = TRUE, quiet = TRUE)
 st_write(ignitions_2025, cfg$results$ignitions_2025, delete_dsn = TRUE, quiet = TRUE)

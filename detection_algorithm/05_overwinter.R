@@ -11,7 +11,7 @@ OUT_DIR <- cfg$results$dir
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
 
-# ── Load ignition points ───────────────────────────────────────────────────────
+#  Load ignition points ─
 ignitions_2024 <- st_read(cfg$results$ignitions_2024, quiet = TRUE)
 ignitions_2025 <- st_read(cfg$results$ignitions_2025, quiet = TRUE)
 
@@ -20,7 +20,7 @@ perims_2023_confirmed <- st_read(cfg$intermediate$perims_2023_confirmed, quiet =
 perims_2024_confirmed <- st_read(cfg$intermediate$perims_2024_confirmed, quiet = TRUE)
 
 
-# ── Spatial overlap: 2023->2024 ────────────────────────────────────────────────
+#  Spatial overlap: 2023->2024 
 # A 2024 fire is a candidate overwinter if its ignition point
 # is within threshold distance of a confirmed 2023 perimeter
 
@@ -29,11 +29,11 @@ DIST_THRESH_M <- 1000
 candidates_23_24 <- ignitions_2024 |>
   filter(dist_to_prev_perim_m <= DIST_THRESH_M)
 
-# ── Spatial overlap: 2024->2025 ────────────────────────────────────────────────
+#  Spatial overlap: 2024->2025 
 candidates_24_25 <- ignitions_2025 |>
   filter(dist_to_prev_perim_m <= DIST_THRESH_M)
 
-# ── Multi-year chains: 2023->2024->2025 ───────────────────────────────────────
+#  Multi-year chains: 2023->2024->2025 ─
 # A chain exists when the 2024 fire that a 2023 fire reactivated into
 # also appears as a confirmed 2024->2025 candidate.
 # The link is: candidates_23_24$fire_id == candidates_24_25$nearest_prev_fire_id
@@ -76,7 +76,7 @@ multiyear <- candidates_23_24 |>
     dist_to_2023_perim_m,
     dist_to_2024_perim_m
   ) 
-# ── Single-year ────────────────────────────────────────────────────────────────
+#  Single-year 
 multiyear_ids <- unique(multiyear$fire_id_2024)
 
 single_23_24 <- candidates_23_24 |>
@@ -85,7 +85,7 @@ single_23_24 <- candidates_23_24 |>
 single_24_25 <- candidates_24_25 |>
   filter(!nearest_prev_fire_id %in% multiyear_ids)
 
-# ── Save ───────────────────────────────────────────────────────────────────────
+#  Save 
 write_csv(multiyear,    cfg$results$multiyear_overwinter)
 st_write(single_23_24, cfg$results$single_23_24_overwinter, delete_dsn = TRUE)
 st_write(single_24_25, cfg$results$single_24_25_overwinter, delete_dsn = TRUE)
