@@ -5,6 +5,16 @@
 library(tidyverse)
 library(lubridate)
 library(here)
+library(sf)
+library(exactextractr)
+library(ggplot2)
+
+# get sdd average in Fort Nelson for 2023
+sdd_23 <- raster::raster("/Volumes/top-secret/PostDoc/multi-year-overwintering/data/snow_dd/SDD_2023.tif")
+# for nelson
+nelson_sf <- st_read("/Volumes/top-secret/PostDoc/multi-year-overwintering/data/study_aoi/study_firezones.shp") |> st_transform(st_crs(sdd_23)) |> dplyr::filter(MFFRZNNM == "Fort Nelson Fire Zone")
+# calculate average mean SDD in nelson
+nelson_sdd_23 <- exact_extract(sdd_23, nelson_sf, 'mean')
 
 AQ_raw <- read.csv(here('data', 'air_quality', 'Fort_Nelson_Region_AQ_2019-2026.csv'))
 
@@ -66,8 +76,8 @@ year_cols   <- setNames(
 
 # Plot 1: Day-of-year time series, coloured by year 
 sdd_lines <- data.frame(
-  xintercept = c(165.14, 167.72),
-  label      = c('2024', '2025')
+  xintercept = c(160.43, 165.14, 167.72),
+  label      = factor(c('2023', '2024', '2025'), levels = year_levels)
 )
 
 p1 <- ggplot(
@@ -76,31 +86,30 @@ p1 <- ggplot(
   ) +
   geom_vline(
     data = sdd_lines,
-    aes(xintercept = xintercept, linetype = label),
-    colour = 'black', linewidth = 0.6
+    aes(xintercept = xintercept, colour = label),
+    linewidth = 0.6, linetype = 'dashed', show.legend = FALSE
   ) +
   geom_smooth(method = 'loess', span = 0.15, se = FALSE, linewidth = 0.8) +
-  scale_colour_manual(values = year_cols) +
-  scale_linetype_manual(values = c('2024' = 'dashed', '2025' = 'dotted')) +
+  scale_colour_manual(values = year_cols, breaks = year_levels) +
   scale_x_continuous(
     breaks = c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335),
     labels = month.abb,
     expand = c(0, 0)
   ) +
   labs(
-    x        = 'Day of Year',
-    y        = expression(PM[2.5] ~ '(' * mu * g~m^{-3} * ')'),
-    colour   = 'Year',
-    linetype = 'Mean SDD'
+    x      = 'Day of Year',
+    y      = expression(PM[2.5] ~ '(' * mu * g~m^{-3} * ')'),
+    colour = 'Year'
   ) +
   guides(
-    colour   = guide_legend(position = 'bottom', nrow = 1, title.position = 'left'),
-    linetype = guide_legend(position = 'right')
+    colour = guide_legend(position = 'right', ncol = 1, title.position = 'top')
   ) +
   theme_bw() +
   theme(
     panel.grid.minor = element_blank()
   )
+p1
+
 
 ggsave('air_quality/pm25_seasonal_timeseries.png', p1, width = 10, height = 5, dpi = 300)
 
@@ -109,6 +118,8 @@ ggsave('air_quality/pm25_seasonal_timeseries.png', p1, width = 10, height = 5, d
 
 
 #  Plot 2: Grouped bar chart: mean PM2.5 by year, bars coloured by season 
+
+
 season_cols <- c(
   'Winter' = '#fee090',
   'Spring' = '#f46d43',
@@ -132,12 +143,15 @@ p2 <- ggplot(dplyr::filter(desc_stats, Year != 2019), aes(x = Year, y = mean, fi
     legend.position  = 'right'
   )
 
-ggsave('air_quality/pm25_seasonal_barplot.png', p3, width = 10, height = 5, dpi = 300)
+ggsave('air_quality/pm25_seasonal_barplot.png', p2, width = 10, height = 5, dpi = 300)
 
 
-# patchwork p1 and p3
+# patchwork p1 and p2
 library(patchwork)
 p_combined <- p1 / p2 + plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(face = 'bold', size = 14))
 p_combined
 
 ggsave('air_quality/pm25_grouped_timeseries_barplot.png', p_combined, width = 10, height = 10, dpi = 300)
+
+
+
