@@ -40,10 +40,10 @@ AQ_daily <- AQ_daily |>
     Month      = month(Date_stamp, label = TRUE, abbr = FALSE),
     Julian_Day = yday(Date_stamp),
     Season     = case_when(
-      month(Date_stamp) %in% c(1, 2, 3)   ~ 'Winter',
-      month(Date_stamp) %in% c(4, 5, 6)   ~ 'Spring',
-      month(Date_stamp) %in% c(7, 8, 9)   ~ 'Summer',
-      month(Date_stamp) %in% c(10, 11, 12) ~ 'Fall'
+      month(Date_stamp) %in% c(11,12,1, 2, 3)   ~ 'Winter',
+      month(Date_stamp) %in% c(4, 5)   ~ 'Spring',
+      month(Date_stamp) %in% c(6,7, 8)   ~ 'Summer',
+      month(Date_stamp) %in% c(9,10) ~ 'Fall'
     ),
     Season = ordered(Season, levels = c('Winter', 'Spring', 'Summer', 'Fall'))
   )
@@ -63,7 +63,6 @@ desc_stats <- AQ_daily |>
   )
 
 write_csv(desc_stats, 'air_quality/pm25_seasonal_descriptive_stats.csv')
-print(desc_stats, n = Inf)
 
 
 # Colour palette: one colour per year 
