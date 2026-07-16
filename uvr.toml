@@ -2,11 +2,16 @@
 name = "multi-year-overwintering"
 
 [dependencies]
+bcdata = "*"
 cowplot = "*"
 dplyr = "*"
+ggh4x = "*"
 ggnewscale = "*"
 ggplot2 = "*"
 ggspatial = "*"
+logr = "*"
+prettymapr = "*"
 rnaturalearth = "*"
 rnaturalearthdata = "*"
+rosm = "*"
 sf = "*"

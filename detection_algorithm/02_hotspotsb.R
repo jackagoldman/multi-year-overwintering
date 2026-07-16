@@ -7,6 +7,8 @@ data_root <- cfg$environments[[cfg$environment]]$data_root
 d         <- function(subpath) file.path(data_root, subpath)
 
 OUT_DIR <- cfg$results$dir
+
+
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
 #  Load data 

@@ -3,11 +3,17 @@ library(dplyr)
 library(readr)
 library(yaml)
 
+
 cfg       <- yaml.load_file('config.yml')
 data_root <- cfg$environments[[cfg$environment]]$data_root
 d         <- function(subpath) file.path(data_root, subpath)
 
+# for sensitivity analysis write to supplementary results folder either results/ or supplementary/sensitivity_results/ ## need to add to config.yml
+
+
+
 OUT_DIR <- cfg$results$dir
+
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
 
@@ -24,7 +30,7 @@ perims_2024_confirmed <- st_read(cfg$intermediate$perims_2024_confirmed, quiet =
 # A 2024 fire is a candidate overwinter if its ignition point
 # is within threshold distance of a confirmed 2023 perimeter
 
-DIST_THRESH_M <- 1000
+DIST_THRESH_M <- 2000
 
 candidates_23_24 <- ignitions_2024 |>
   filter(dist_to_prev_perim_m <= DIST_THRESH_M)
@@ -85,7 +91,16 @@ single_23_24 <- candidates_23_24 |>
 single_24_25 <- candidates_24_25 |>
   filter(!nearest_prev_fire_id %in% multiyear_ids)
 
-#  Save 
+#  Save #### need to clean up to add sensitivity to config
 write_csv(multiyear,    cfg$results$multiyear_overwinter)
 st_write(single_23_24, cfg$results$single_23_24_overwinter, delete_dsn = TRUE)
 st_write(single_24_25, cfg$results$single_24_25_overwinter, delete_dsn = TRUE)
+
+# ── Save ───────────────────────────────────────────────────────────────────────
+# if DIST_THRESH_M == 500 then save as multiyear_overwinter500.csv single_23_24_overwinter500.geojson single_24_25_overwinter500.geojson and if DIST_THRESH_M == 2000 then save as multiyear_overwinter2000.csv single_23_24_overwinter2000.geojson single_24_25_overwinter2000.geojson
+# else no suffix
+suffix <- if (DIST_THRESH_M %in% c(500, 2000)) paste0(DIST_THRESH_M) else ""
+suffix <- paste0(DIST_THRESH_M)
+write_csv(multiyear,    file.path(OUT_DIR, paste0('multiyear_overwinter', suffix, '.csv')))
+st_write(single_23_24, file.path(OUT_DIR, paste0('single_23_24_overwinter', suffix, '.geojson')), delete_dsn = TRUE)
+st_write(single_24_25, file.path(OUT_DIR, paste0('single_24_25_overwinter', suffix, '.geojson')), delete_dsn = TRUE)
