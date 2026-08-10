@@ -1,0 +1,89 @@
+# config.yml — Centralized path configuration for the detection algorithm
+# Load this file at the top of each script before referencing any file paths.
+#
+# Python:  import yaml; cfg = yaml.safe_load(open('config.yml'))
+# R:       library(yaml); cfg <- yaml.load_file('config.yml')
+#
+# To switch environments, change the `environment` key below.
+# Scripts resolve full data paths as: os.path.join(data_root, data.<section>.<key>)
+
+# ── Environment ────────────────────────────────────────────────────────────────
+environment: remote   # change to 'remote' when working from the hard drive
+
+environments:
+  home:
+    data_root: data
+  remote:
+    data_root: /Volumes/top-secret/PostDoc/multi-year-overwintering/data
+
+# ── Data sub-paths (relative to data_root) ────────────────────────────────────
+data:
+
+  fires:
+    all_fires_processed: analysis/all_fires_processed.geojson
+    all_hotspots:        analysis/all_hotspots_2023_2025_night_nh.geojson
+
+  snow_dd:
+    sdd_raster_2024: snow_dd/SDD_2024.tif
+    sdd_raster_2025: snow_dd/SDD_2025.tif
+
+  perimeters:
+    perims_2023: processed_fire_perimeters/perims_2023_clipped_3005.shp
+    perims_2024: processed_fire_perimeters/perims_2024_clipped_3005.shp
+    perims_2025: processed_fire_perimeters/perims_2025_clipped_3005.shp
+
+  lightning:
+    cg_flashes_2024: raw/lightning/cg_flashes_3hr_0.1-deg_2024.nc
+    cg_flashes_2025: raw/lightning/cg_flashes_3hr_0.1-deg_2025.nc
+
+  roads:
+    roads_study_zones: roads_study_zones_3005.geojson
+
+  plotting:
+    fire_centres: raw/BC_Fire_Centres/DRP_MOF_FIRE_CENTRES_SP/DRPMFFRCNT_polygon.shp
+    study_zones: study_aoi/study_firezones.shp
+    hist_fires: raw/BC_Fire_Perimeters_Historical/PROT_HISTORICAL_FIRE_POLYS_SP/H_FIRE_PLY_polygon.shp
+    curr_fires: raw/BC_Fire_Perimeters_2025/PROT_CURRENT_FIRE_POLYS_SP/C_FIRE_PLY_polygon.shp
+
+# ── Intermediate products (01_sdd → 02_hotspots) ──────────────────────────────
+intermediate:
+  dir: results/intermediate_products
+
+  sdd_2024: results/intermediate_products/sdd_2024.csv
+  sdd_2025: results/intermediate_products/sdd_2025.csv
+  perims_2023_confirmed: results/intermediate_products/perims_2023_confirmed.geojson
+  perims_2024_confirmed: results/intermediate_products/perims_2024_confirmed.geojson
+  spring_hotspots_2024_in_2023: results/intermediate_products/spring_hotspots_2024_in_2023_perims.geojson
+
+# ── Stage outputs ──────────────────────────────────────────────────────────────
+results:
+  dir: results
+
+  # 02_hotspotsb.R outputs
+  ignitions_2024: results/ignitions_2024.geojson
+  ignitions_2025: results/ignitions_2025.geojson
+
+  # 03_lightning.py outputs
+  ignitions_2024_lightning: results/ignitions_2024_lightning.csv
+  ignitions_2025_lightning: results/ignitions_2025_lightning.csv
+
+  # 04_roads.py outputs
+  ignitions_2025_roads: results/ignitions_2025_roads.csv
+
+  # 05_overwinter.R outputs
+  multiyear_overwinter:    results/multiyear_overwinter.csv
+  single_23_24_overwinter: results/single_23_24_overwinter.geojson
+  single_24_25_overwinter: results/single_24_25_overwinter.geojson
+
+  # 06b_overwintering_chains.R outputs
+  overwintering_perimeter_chains:         results/inplace_overwintering_perimeter_chains.csv
+  overwintering_perimeter_chains_summary: results/inplace_overwintering_perimeter_chains_summary.csv
+  spring_hotspots_2025_in_chains:         results/inplace_spring_hotspots_2025.geojson
+
+# ── Algorithm parameters ───────────────────────────────────────────────────────
+params:
+  buffer_m: 1000            # hotspot buffer for 2024→2025 linkage (metres)
+  sdd_window_min: -5        # days after SDD (lower bound; negative = before melt)
+  sdd_window_max: 60        # days after SDD (upper bound)
+  lightning_window_days: 7  # exclude hotspot if lightning within ±N days
+  lightning_buffer_m: 2000  # search radius for lightning check (metres)
