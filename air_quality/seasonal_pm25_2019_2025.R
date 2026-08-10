@@ -125,6 +125,8 @@ season_cols <- c(
   'Summer' = '#d73027',
   'Fall'   = '#a50026'
 )
+library(viridis)
+season_cols <- setNames(viridis(4, option = "mako"), c("Winter", "Spring", "Summer", "Fall"))
 
 p2 <- ggplot(dplyr::filter(desc_stats, Year != 2019), aes(x = Year, y = mean, fill = Season)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.7,
