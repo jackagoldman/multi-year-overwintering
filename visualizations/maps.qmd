@@ -1290,6 +1290,14 @@ hotspots_all <- bind_rows(hotspots_2024_2023, hotspots_2025_2024)
 # filter hotspots where fire_id_2023 is in multiyear chains — these are the ones that are in the study area and relevant to the map
 hotspots_all <- hotspots_all %>%
   filter(fire_id_2023 %in% multiyear$fire_id_2023)
+
+study_zones <- st_read('/Volumes/top-secret/PostDoc/multi-year-overwintering/data/study_aoi/study_firezones.shp', quiet = TRUE) 
+
+crs_bc <- 3005
+ 
+study_zones <- st_transform(study_zones, crs_bc)
+
+
 ```
 
 ```{r}
@@ -1297,6 +1305,7 @@ study_bbox <- st_bbox(study_zones)
 pad <- 60000
 xlim_bc <- c(study_bbox["xmin"] - pad, study_bbox["xmax"] + pad)
 ylim_bc <- c(study_bbox["ymin"] - pad, study_bbox["ymax"] + pad)
+
 ```
 
 ```{r}
@@ -1310,9 +1319,15 @@ hotspot_colours <- c(
 )
 
 zone_colours <- c(
-  "Fort St. John Fire Zone" = "#E8D0E8",
-  "Fort Nelson Fire Zone"   = "#C8E0C8"
+  "Fort St. John Fire Zone" = "#c060c0",
+  "Fort Nelson Fire Zone"   = "#6ba36b"
 )
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = fires_2023, fill = "orange", colour = NA) +
+  coord_sf(expand = FALSE)
 ```
 
 ```{r}
@@ -1414,8 +1429,6 @@ figure_4 <- ggplot() +
   ) +
 
   coord_sf(
-    xlim   = xlim_bc,
-    ylim   = ylim_bc,
     expand = FALSE
   ) +
 
@@ -1428,7 +1441,7 @@ figure_4 <- ggplot() +
     plot.margin          = margin(12, 12, 12, 12),
     plot.background      = element_rect(fill = "transparent", colour = NA),
     panel.background     = element_rect(fill = "transparent", colour = NA),
-    legend.position      = c(0.25, 0.45),
+    legend.position      = c(0.15, 0.45),
     legend.justification = c("left", "top"),
     legend.background    = element_rect(fill = "white", colour = NA, linewidth = 0),
     legend.title         = element_text(face = "bold", size = 9),
