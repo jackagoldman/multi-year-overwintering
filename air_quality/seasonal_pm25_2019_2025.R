@@ -68,7 +68,7 @@ write_csv(desc_stats, 'air_quality/pm25_seasonal_descriptive_stats.csv')
 # Colour palette: one colour per year 
 year_levels <- levels(AQ_daily$Year)
 year_cols   <- setNames(
-  colorRampPalette(c('#2166ac', '#74add1', '#abd9e9', '#fee090', '#f46d43', '#d73027', '#a50026'))(length(year_levels)),
+  colorRampPalette(c('#2166ac', '#74add1', '#abd9e9', '#affe90', "#FFD966", "#E08030", "#C0281C"))(length(year_levels)),
   year_levels
 )
 
