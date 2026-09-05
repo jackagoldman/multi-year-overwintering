@@ -10,10 +10,16 @@ library(cowplot)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(yaml)
+remotes::install_github("ropensci/rnaturalearthhires")
+install.packages("prettymappr")
+
+
 
 cfg       <- yaml.load_file('../config.yml')
 data_root <- cfg$environments[[cfg$environment]]$data_root
+project_root <- cfg$environments[[cfg$environment]]$project_root
 d         <- function(subpath) file.path(data_root, subpath)
+p <- function(subpath) file.path(project_root, subpath)
 
 ```
 
@@ -62,12 +68,12 @@ colour palette
 
 ```{r}
 centre_colours <- c(
-  "Cariboo Fire Centre"      = "#F5E6C8",   # pale tan/cream
-  "Coastal Fire Centre"      = "#F4C8A0",   # peach-orange
-  "Kamloops Fire Centre"     = "#C8D8F0",   # light blue
-  "Northwest Fire Centre"    = "#B8C8E8",   # muted blue
-  "Prince George Fire Centre"= "#C8E0C8",   # light green
-  "Southeast Fire Centre"    = "#D8C8E8"    # lavender
+  "Cariboo"      = "#F5E6C8",   # pale tan/cream
+  "Coastal"      = "#F4C8A0",   # peach-orange
+  "Kamloops"     = "#C8D8F0",   # light blue
+  "Northwest"    = "#B8C8E8",   # muted blue
+  "Prince George"= "#C8E0C8",   # light green
+  "Southeast"    = "#D8C8E8"    # lavender
 )
  
 # Fire perimeter fills — bold, match original legend
@@ -76,7 +82,11 @@ fire_colours <- c(
   "2024" = "#E08030",   # orange
   "2025" = "#C0281C"    # red
 )
+
+unique(fire_centres$centre_name)
+names(centre_colours)
 ```
+
 
 prepare fire layers with labels
 
@@ -102,7 +112,10 @@ Get fire centre name column
 ```{r}
 names(fire_centres)
 fire_centres <- fire_centres %>%
-  rename(centre_name = MFFRCNTRNM)   
+  rename(centre_name = MFFRCNTRNM)|>
+  mutate(centre_name = stringr::str_replace(centre_name, " Fire Centre", ""))  # remove trailing space
+
+
 ```
 
 Build the map
@@ -113,15 +126,15 @@ p_main <- ggplot() +
  
   geom_sf(
     data      = fire_centres,
-    aes(fill  = centre_name),
-    colour    = "gray60",
+    aes(fill  = centre_name, colour = centre_name),
+    colour    = centre_colours,
     linewidth = 0.4,
     alpha     = 0.85
   ) +
   scale_fill_manual(
     name   = "Fire Centres",
     values = centre_colours,
-    guide  = guide_legend(
+    guide_legend(
       order        = 2,
       override.aes = list(colour = "grey60", linewidth = 0.3)
     )
@@ -136,31 +149,49 @@ p_main <- ggplot() +
     alpha    = 0.9
   ) +
   scale_fill_manual(
-    name   = "Fires",
+    name   = "Fire Year",
     values = fire_colours,
-    labels = c("2023 perimeters", "2024 perimeters", "2025 perimeters"),
+    labels = c("2023", "2024", "2025"),
     guide  = guide_legend(
       order        = 1,
       override.aes = list(colour = NA)
     )
-  ) +
+  ) +geom_sf_label(
+  data          = fire_centres |> filter(centre_name != "Northwest"),
+  aes(label     = centre_name),
+  size          = 3,
+  colour        = "grey30",
+  fill          = alpha("white", 0.6),
+  label.size    = 0,
+  label.padding = unit(0.15, "lines")
+) +
+geom_sf_label(
+  data          = fire_centres |> filter(centre_name == "Northwest"),
+  aes(label     = centre_name),
+  size          = 3,
+  colour        = "grey30",
+  fill          = alpha("white", 0.6),
+  label.size    = 0,
+  label.padding = unit(0.15, "lines"),
+  nudge_y       = 15500  # adjust up/down here
+) +
  
-  annotation_north_arrow(
-    location    = "br",
-    which_north = "true",
-    pad_x       = unit(0.19, "in"),
-    pad_y       = unit(0.2, "in"),
+ annotation_north_arrow(
+  location    = "tr",
+  which_north = "true",
+  pad_x       = unit(0.25, "in"),
+  pad_y       = unit(2.3, "in"),   # distance down from top edge — tune this
     style       = north_arrow_fancy_orienteering(
-      fill      = c("grey30", "white"),
-      line_col  = "grey30",
-      text_col  = "grey30",
-      text_size = 8
-    )
-  ) +
+    fill      = c("grey30", "white"),
+    line_col  = "grey30",
+    text_col  = "grey30",
+    text_size = 8
+  )
+) +
   annotation_scale(
     location   = "br",
     width_hint = 0.3,
-    pad_x      = unit(0.5, "in"),
+    pad_x      = unit(0.3, "in"),
     pad_y      = unit(0.12, "in"),
     text_cex   = 0.7,
     line_col   = "grey30",
@@ -191,6 +222,10 @@ p_main <- ggplot() +
  p_main
 ```
 
+```{r}
+ggsave(here::here("visualizations", "maps", "Fig1_bc_fire_map.png"), p_main, width = 8, height = 8, dpi = 300)
+```
+
 
 Inset map of Canada with BC highlighted
 
@@ -211,7 +246,7 @@ p_inset <- ggplot() +
   geom_sf(data = canada_proj, fill = "#D4D4D4", colour = "white", linewidth = 0.2) +
  
   # BC highlighted in a warm amber to stand out
-  geom_sf(data = bc_highlight, fill = "#E08030", colour = "white", linewidth = 0.4) +
+  geom_sf(data = bc_highlight, fill = "green", colour = "white", linewidth = 0.4) +
  
   # Crop to Canada + a bit of northern USA
   coord_sf(
@@ -249,7 +284,7 @@ final_map
 
 ```{r}
 ggsave(
-  filename = "visualizations/maps/bc_fire_map.png",
+  filename = "../visualizations/maps/fig1_bc_fire_map.png",
   plot     = final_map,
   width    = 8,
   height   = 9,
@@ -371,7 +406,7 @@ figure_2 <- ggplot() +
     values = zone_colours,
     guide  = guide_legend(
       order        = 2,
-      override.aes = list(colour = "grey60", linewidth = 0.3, alpha = 0.8)
+      override.aes = list(colour = "grey60", linewidth = 0.3)
     )
   ) +
  
@@ -381,8 +416,7 @@ figure_2 <- ggplot() +
   geom_sf(
     data     = fires_all,
     aes(fill = period),
-    colour   = NA,
-    alpha    = 0.9
+    colour   = "gray30"
   ) +
   scale_fill_manual(
     name   = "Fires",
@@ -393,17 +427,6 @@ figure_2 <- ggplot() +
       order        = 1,
       override.aes = list(colour = NA)
     )
-  ) +
- 
-  # Zone name labels
-  geom_sf_label(
-    data          = study_zones,
-    aes(label     = MFFRZNNM),
-    size          = 3,
-    colour        = "grey30",
-    fill          = alpha("white", 0.6),
-    label.size    = 0,
-    label.padding = unit(0.15, "lines")
   ) +
  
   annotation_north_arrow(
@@ -480,21 +503,22 @@ library(patchwork)
 library(ggspatial)
 library(stringr)
 library(prettymapr)
+library(readr)
 ```
 
 ```{r}
-chains <- read_csv('results/multiyear_overwinter.csv')
+chains <- read_csv('../results/multiyear_overwinter.csv')
 
-perims_2023 <- st_read('data/processed_fire_perimeters/perims_2023_clipped_3005.shp', quiet = TRUE) |>st_make_valid() |> st_transform(4326)
-perims_2024 <- st_read('data/processed_fire_perimeters/perims_2024_clipped_3005.shp', quiet = TRUE) |> st_make_valid() |> st_transform(4326)
-perims_2025 <- st_read('data/processed_fire_perimeters/perims_2025_clipped_3005.shp', quiet = TRUE) |> st_make_valid() |> st_transform(4326)
+perims_2023 <- st_read(d(cfg$data$perimeters$perims_2023), quiet = TRUE) |>st_make_valid() |> st_transform(4326)
+perims_2024 <- st_read(d(cfg$data$perimeters$perims_2024), quiet = TRUE) |> st_make_valid() |> st_transform(4326)
+perims_2025 <- st_read(d(cfg$data$perimeters$perims_2025), quiet = TRUE) |> st_make_valid() |> st_transform(4326)
 
 # study zones
-study_zones <- st_read('data/study_aoi/study_firezones.shp', quiet = TRUE) |> st_transform(4326)
+study_zones <- st_read(d(cfg$data$plotting$study_zones), quiet = TRUE) |> st_transform(4326)
 
 # ignitions
-ignitions_2024 <- st_read('results/ignitions_2024.geojson', quiet = TRUE) |> st_transform(4326)
-ignitions_2025 <- st_read('results/ignitions_2025.geojson', quiet = TRUE) |> st_transform(4326)
+ignitions_2024 <- st_read(p(cfg$results$ignitions_2024), quiet = TRUE) |> st_transform(4326)
+ignitions_2025 <- st_read(p(cfg$results$ignitions_2025), quiet = TRUE) |> st_transform(4326)
 
 clean_names <- function(df, year) {
   names(df) <- tolower(names(df))
@@ -522,6 +546,7 @@ PERIM_PAL <- c(
   "2025 reactivation"  = "#C0281C"
 )
  
+
 PERIM_ALPHA <- c(
   "Background"         = 0.30,
   "2023 origin"        = 0.75,
@@ -530,8 +555,8 @@ PERIM_ALPHA <- c(
 )
  
 HOTSPOT_PAL <- c(
-  "2023\u21922024" = "#3079e0",
-  "2024\u21922025" = "#930cb8"
+  "2023\u21922024" = "#0072B2",
+  "2024\u21922025" = "black"
 )
  
 theme_pub <- function() {
@@ -604,7 +629,7 @@ max_h <- max(sapply(all_bboxes, function(b) unname(b['ymax'] - b['ymin']))) + PA
 plot_list <- vector('list', nrow(chains))
 bbox_list <- vector('list', nrow(chains))
 
-
+HOTSPOT_PAL <- c("2023→2024" = "#4D4D4D", "2024→2025" = "black")
 for (i in seq_len(nrow(chains))) {
 
   row    <- chains[i, ]
@@ -656,7 +681,7 @@ for (i in seq_len(nrow(chains))) {
       aes(fill  = chain_class),
       colour    = 'grey40',
       linewidth = 0.3,
-      alpha     = 0.6
+      #alpha     = 0.6
     ) +
     scale_fill_manual(
       name   = 'Fire perimeter',
@@ -666,15 +691,24 @@ for (i in seq_len(nrow(chains))) {
 
     ggnewscale::new_scale_fill() +
 
-    geom_sf(
-      data  = spring_chain,
-      aes(fill = transition),
-      shape = 24, size = 2.5, colour = 'white', stroke = 0.4, alpha = 0.95
+    geom_point(
+      data  = spring_chain%>% 
+             mutate(x = st_coordinates(.)[,1],
+                    y = st_coordinates(.)[,2]) %>%
+             st_drop_geometry(),
+    aes(x = x, y = y, colour = transition),
+       fill   = NA,
+    shape  = 21,     # hollow circle
+    size   = 2,
+    stroke = 1
     ) +
-    scale_fill_manual(
+    scale_colour_manual(
       name   = 'Overwintering Ignition',
       values = HOTSPOT_PAL,
-      guide  = guide_legend(order = 3)
+      guide  = guide_legend(
+      order        = 2,
+      override.aes = list(shape = 21, fill = NA, size = 2, stroke = 0.6)
+    )
     ) +
 
     coord_sf(
@@ -737,14 +771,30 @@ plot_list[[1]] <- ggplot() +
                     guide = guide_legend(order = 2)) +
   ggnewscale::new_scale_fill() +
   geom_sf(data = fires_chain, aes(fill = chain_class),
-          colour = 'grey40', linewidth = 0.3, alpha = 0.6) +
+          colour = 'grey40', linewidth = 0.3, #alpha = 0.6
+          ) +
   scale_fill_manual(name = 'Fire perimeter', values = PERIM_PAL,
                     guide = guide_legend(order = 1)) +
   ggnewscale::new_scale_fill() +
-  geom_sf(data = spring_chain, aes(fill = transition),
-          shape = 24, size = 2.5, colour = 'white', stroke = 0.4, alpha = 0.95) +
-  scale_fill_manual(name = 'Overwintering Ignition', values = HOTSPOT_PAL,
-                    guide = guide_legend(order = 3)) +
+  geom_point(
+      data  = spring_chain%>% 
+             mutate(x = st_coordinates(.)[,1],
+                    y = st_coordinates(.)[,2]) %>%
+             st_drop_geometry(),
+    aes(x = x, y = y, colour = transition),
+       fill   = NA,
+    shape  = 21,     # hollow circle
+    size   = 4,
+    stroke = 1.5
+    ) +
+    scale_colour_manual(
+      name   = 'Overwintering Ignition',
+      values = HOTSPOT_PAL,
+      guide  = guide_legend(
+      order        = 2,
+      override.aes = list(shape = 21, fill = NA, size = 2, stroke = 0.6)
+    )
+    ) +
   coord_sf(crs = 4326,
            xlim = c(bbox_zoom['xmin'], bbox_zoom['xmax']),
            ylim = c(bbox_zoom['ymin'], bbox_zoom['ymax']),
@@ -761,7 +811,7 @@ plot_list[[1]] <- ggplot() +
   plot.title             = element_text(size = 8, face = 'bold')
 )
 p_1 <- plot_list[[1]] + theme(legend.position = 'right')
-
+p_1
 ```
 
 P_2
@@ -798,18 +848,31 @@ plot_list[[2]] <- ggplot() +
                     guide = guide_legend(order = 2)) +
   ggnewscale::new_scale_fill() +
   geom_sf(data = fires_chain, aes(fill = chain_class),
-          colour = 'grey40', linewidth = 0.3, alpha = 0.6) +
+          colour = 'grey40', linewidth = 0.3, 
+          #alpha = 0.6
+          ) +
   scale_fill_manual(name = 'Fire perimeter', values = PERIM_PAL,
                     guide = guide_legend(order = 1)) +
   ggnewscale::new_scale_fill() +
-  geom_sf(data = spring_chain, aes(fill = transition),
-          shape = 24, size = 2.5, colour = 'white', stroke = 0.4, alpha = 0.95) +
-  scale_fill_manual(name = 'Overwintering Ignition', values = HOTSPOT_PAL,
-                    guide = guide_legend(order = 3)) +
-  coord_sf(crs = 4326,
-           xlim = c(bbox_zoom['xmin'], bbox_zoom['xmax']),
-           ylim = c(bbox_zoom['ymin'], bbox_zoom['ymax']),
-           expand = FALSE) +
+  geom_point(
+      data  = spring_chain%>% 
+             mutate(x = st_coordinates(.)[,1],
+                    y = st_coordinates(.)[,2]) %>%
+             st_drop_geometry(),
+    aes(x = x, y = y, colour = transition),
+       fill   = NA,
+    shape  = 21,     # hollow circle
+    size   = 2,
+    stroke = 0.6
+    ) +
+    scale_colour_manual(
+      name   = 'Overwintering Ignition',
+      values = HOTSPOT_PAL,
+      guide  = guide_legend(
+      order        = 2,
+      override.aes = list(shape = 21, fill = NA, size = 2, stroke = 0.6)
+    )
+    ) +
   theme_pub() +theme(
   legend.position        = 'right',
   legend.justification   = c(0, 1),
@@ -822,7 +885,7 @@ plot_list[[2]] <- ggplot() +
   plot.title             = element_text(size = 8, face = 'bold')
 )
 p_2 <- plot_list[[2]] + theme(legend.position = 'right')
-
+p_2
 ```
 
 P_3
@@ -859,18 +922,30 @@ plot_list[[3]] <- ggplot() +
                     guide = guide_legend(order = 2)) +
   ggnewscale::new_scale_fill() +
   geom_sf(data = fires_chain, aes(fill = chain_class),
-          colour = 'grey40', linewidth = 0.3, alpha = 0.6) +
+          colour = 'grey40', linewidth = 0.3, #alpha = 0.6
+          ) +
   scale_fill_manual(name = 'Fire perimeter', values = PERIM_PAL,
                     guide = guide_legend(order = 1)) +
   ggnewscale::new_scale_fill() +
-  geom_sf(data = spring_chain, aes(fill = transition),
-          shape = 24, size = 2.5, colour = 'white', stroke = 0.4, alpha = 0.95) +
-  scale_fill_manual(name = 'Overwintering Ignition', values = HOTSPOT_PAL,
-                    guide = guide_legend(order = 3)) +
-  coord_sf(crs = 4326,
-           xlim = c(bbox_zoom['xmin'], bbox_zoom['xmax']),
-           ylim = c(bbox_zoom['ymin'], bbox_zoom['ymax']),
-           expand = FALSE) +
+  geom_point(
+      data  = spring_chain%>% 
+             mutate(x = st_coordinates(.)[,1],
+                    y = st_coordinates(.)[,2]) %>%
+             st_drop_geometry(),
+    aes(x = x, y = y, colour = transition),
+       fill   = NA,
+    shape  = 21,     # hollow circle
+    size   = 4,
+    stroke = 1.5
+    ) +
+    scale_colour_manual(
+      name   = 'Overwintering Ignition',
+      values = HOTSPOT_PAL,
+      guide  = guide_legend(
+      order        = 2,
+      override.aes = list(shape = 21, fill = NA, size = 2, stroke = 0.6)
+    )
+    ) +
   theme_pub() +theme(
   legend.position        = 'right',
   legend.justification   = c(0, 1),
@@ -883,7 +958,7 @@ plot_list[[3]] <- ggplot() +
   plot.title             = element_text(size = 8, face = 'bold')
 )
 p_3 <- plot_list[[3]] + theme(legend.position = 'right')
-
+p_3
 ```
 
 P_4
@@ -919,14 +994,30 @@ plot_list[[4]] <- ggplot() +
                     guide = guide_legend(order = 2)) +
   ggnewscale::new_scale_fill() +
   geom_sf(data = fires_chain, aes(fill = chain_class),
-          colour = 'grey40', linewidth = 0.3, alpha = 0.6) +
+          colour = 'grey40', linewidth = 0.3, #alpha = 0.6
+          ) +
   scale_fill_manual(name = 'Fire perimeter', values = PERIM_PAL,
                     guide = guide_legend(order = 1)) +
   ggnewscale::new_scale_fill() +
-  geom_sf(data = spring_chain, aes(fill = transition),
-          shape = 24, size = 2.5, colour = 'white', stroke = 0.4, alpha = 0.95) +
-  scale_fill_manual(name = 'Overwintering Ignition', values = HOTSPOT_PAL,
-                    guide = guide_legend(order = 3)) +
+  geom_point(
+      data  = spring_chain%>% 
+             mutate(x = st_coordinates(.)[,1],
+                    y = st_coordinates(.)[,2]) %>%
+             st_drop_geometry(),
+    aes(x = x, y = y, colour = transition),
+       fill   = NA,
+    shape  = 18,     # hollow circle
+    size   = 4,
+    stroke = 1.5
+    ) +
+    scale_colour_manual(
+      name   = 'Overwintering Ignition',
+      values = HOTSPOT_PAL,
+      guide  = guide_legend(
+      order        = 2,
+      override.aes = list(shape = 21, fill = NA, size = 2, stroke = 0.6)
+    )
+    ) +
   coord_sf(crs = 4326,
            xlim = c(bbox_zoom['xmin'], bbox_zoom['xmax']),
            ylim = c(bbox_zoom['ymin'], bbox_zoom['ymax']),
@@ -943,13 +1034,13 @@ plot_list[[4]] <- ggplot() +
   plot.title             = element_text(size = 8, face = 'bold')
 )
 p_4 <- plot_list[[4]] + theme(legend.position = 'right')
-
+p_4
 ```
 
 
 
 ```{r}
-# pull chain 4 data
+# pull chain 5 data
 fid_23 <- chains$fire_id_2023[5]
 fid_24 <- chains$fire_id_2024[5]
 fid_25 <- chains$fire_id_2025[5]
@@ -980,14 +1071,30 @@ plot_list[[5]] <- ggplot() +
                     guide = guide_legend(order = 2)) +
   ggnewscale::new_scale_fill() +
   geom_sf(data = fires_chain, aes(fill = chain_class),
-          colour = 'grey40', linewidth = 0.3, alpha = 0.6) +
+          colour = 'grey40', linewidth = 0.3, #alpha = 0.6
+          ) +
   scale_fill_manual(name = 'Fire perimeter', values = PERIM_PAL,
                     guide = guide_legend(order = 1)) +
   ggnewscale::new_scale_fill() +
-  geom_sf(data = spring_chain, aes(fill = transition),
-          shape = 24, size = 2.5, colour = 'white', stroke = 0.4, alpha = 0.95) +
-  scale_fill_manual(name = 'Overwintering Ignition', values = HOTSPOT_PAL,
-                    guide = guide_legend(order = 3)) +
+  geom_point(
+      data  = spring_chain%>% 
+             mutate(x = st_coordinates(.)[,1],
+                    y = st_coordinates(.)[,2]) %>%
+             st_drop_geometry(),
+    aes(x = x, y = y, colour = transition),
+       fill   = NA,
+    shape  = 21,     # hollow circle
+    size   = 4,
+    stroke = 1.5
+    ) +
+    scale_colour_manual(
+      name   = 'Overwintering Ignition',
+      values = HOTSPOT_PAL,
+      guide  = guide_legend(
+      order        = 2,
+      override.aes = list(shape = 21, fill = NA, size = 2, stroke = 0.6)
+    )
+    ) +
   coord_sf(crs = 4326,
            xlim = c(bbox_zoom['xmin'], bbox_zoom['xmax']),
            ylim = c(bbox_zoom['ymin'], bbox_zoom['ymax']),
@@ -1004,6 +1111,7 @@ plot_list[[5]] <- ggplot() +
   plot.title             = element_text(size = 8, face = 'bold')
 )
 p_5 <- plot_list[[5]] + theme(legend.position = 'right')
+p_5
 ```
 
 
@@ -1239,7 +1347,7 @@ canvas
 library(svglite)
 
 ggsave(
-  filename = 'visualizations/maps/multiyear_chains.svg',
+  filename = '../visualizations/maps_versions/multiyear_chains_v1.svg',
   plot     = canvas,
   width    = 12,
   height   = 8,
@@ -1252,7 +1360,7 @@ ggsave(
 
 ```{r}
 ggsave(
-  filename = 'visualizations/maps/figure_2_fire_zones.svg',
+  filename = '../visualizations/maps_versions/figure_2_fire_zones_v1.svg',
   plot     = figure_2,
   width    = 12,
   height   = 8,
@@ -1276,7 +1384,6 @@ dev.off()
 fire zone background
 
 ```{r}
-fires_2023 <- st_read(d(cfg$data$perimeters$perims_2023))
 hotspots_2024_2023 <- st_read(file.path('..', cfg$intermediate$spring_hotspots_2024_in_2023))
 hotspots_2025_2024 <- st_read(file.path('..', cfg$results$spring_hotspots_2025_in_chains))
 multiyear <- readr::read_csv(file.path('..', cfg$results$overwintering_perimeter_chains_summary)) |> 
@@ -1319,8 +1426,8 @@ hotspot_colours <- c(
 )
 
 zone_colours <- c(
-  "Fort St. John Fire Zone" = "#c060c0",
-  "Fort Nelson Fire Zone"   = "#6ba36b"
+  "Fort St. John Fire Zone"    = "#E8D0E8",   # soft lavender-pink
+  "Fort Nelson Fire Zone"  = "#C8E0C8"    # 
 )
 ```
 
@@ -1356,13 +1463,13 @@ figure_4 <- ggplot() +
   geom_sf(
     data      = fires_2023,
     aes(fill  = as.character(FIRE_YEAR)),
-    colour    = NA,
-    alpha     = 0.9
+    colour    = "black",
+    alpha     = 1
   ) +
   scale_fill_manual(
-    name   = "Perimeters",
+    name   = "Fire Perimeters",
     values = fire_colours,
-    labels = c("2023 perimeters"),
+    labels = c("2023"),
     guide  = guide_legend(
       order        = 1,
       override.aes = list(colour = NA)
@@ -1388,23 +1495,12 @@ figure_4 <- ggplot() +
     name   = "Hotspots",
     values = c("2024" = "#3079e0",
                "2025" = "#930cb8"),
-    labels = c("2024 hotspots", "2025 hotspots"),
+    labels = c("2024 fall", "2025 spring"),
     guide  = guide_legend(
       order        = 2,
       override.aes = list(shape = 21, fill = NA, size = 2, stroke = 0.6)
     )
-  ) +
-
-  # Zone name labels
-  geom_sf_label(
-    data          = study_zones,
-    aes(label     = MFFRZNNM),
-    size          = 3,
-    colour        = "grey30",
-    fill          = alpha("white", 0.6),
-    label.size    = 0,
-    label.padding = unit(0.15, "lines")
-  ) +
+  )  +
 
   annotation_north_arrow(
     location    = "br",
@@ -1444,8 +1540,8 @@ figure_4 <- ggplot() +
     legend.position      = c(0.15, 0.45),
     legend.justification = c("left", "top"),
     legend.background    = element_rect(fill = "white", colour = NA, linewidth = 0),
-    legend.title         = element_text(face = "bold", size = 9),
-    legend.text          = element_text(size = 8),
+    legend.title         = element_text(face = "bold", size = 12),
+    legend.text          = element_text(size = 12),
     legend.spacing.y     = unit(0.15, "cm"),
     legend.key.size      = unit(0.45, "cm"),
     legend.box           = "vertical",
@@ -1484,8 +1580,8 @@ inset <- ggplot() +
   geom_sf(
     data      = fires_2023,
     aes(fill  = as.character(FIRE_YEAR)),
-    colour    = NA,
-    alpha     = 0.9
+    colour    = "black",
+    alpha     = 1
   ) +
   scale_fill_manual(values = fire_colours, guide = "none") +
 
@@ -1520,7 +1616,7 @@ inset <- ggplot() +
 
   theme_void() +
   theme(
-    panel.border     = element_rect(colour = "grey30", fill = NA, linewidth = 0.8),
+    panel.border     = element_rect(colour = "red", fill = NA, linewidth = 0.8),
     plot.background  = element_rect(fill = "white", colour = NA)
   )
 
@@ -1539,15 +1635,639 @@ figure_4_final <- figure_4_with_box | inset +
 figure_4_final
 ```
 
+```{r}
+ 
+
+```
+
 save as svg
 
 ```{r}
 ggsave(
-  filename = 'maps/figure_4_overwintering.svg',
+  filename = 'maps_versions/figure_4_overwintering_v2.svg',
   plot     = figure_4_final,
   width    = 12,
   height   = 8,
   units    = 'in',
   device   = svglite::svglite
+)
+```
+
+
+
+
+
+# FIGURE 2 FINAL WORKFLOW ###
+
+
+-------------------------------------------------------------
+
+```{r}
+library(cowplot)
+library(ggplot2)
+library(sf)
+library(dplyr)
+library(ggnewscale)
+```
+# basemap
+
+
+```{r}
+
+study_zones_path <- d(cfg$data$plotting$study_zones)
+ 
+```
+
+
+```{r}
+
+study_zones <- st_read(study_zones_path, quiet = TRUE)
+```
+
+
+
+clip to zones
+```{r}
+study_union <- st_union(study_zones)   # single polygon for clipping
+ 
+# 1950-2022: keep only fires fully WITHIN the study zones
+clip_within <- function(x) {
+  x <- st_make_valid(x)
+  x[st_within(x, study_union, sparse = FALSE)[, 1], ]
+}
+ 
+# 2023-2025: keep fires that INTERSECT the study zones (then clip geometry)
+# 2023-2025: keep fires that INTERSECT the study zones, but retain full geometry
+clip_intersect <- function(x) {
+  x <- st_make_valid(x)
+  x[st_intersects(x, study_union, sparse = FALSE)[, 1], ]
+}
+ 
+ 
+fires_hist <- hist_fires %>% filter(FIRE_YEAR <= 2022) %>% clip_within()
+fires_2023 <- hist_fires %>% filter(FIRE_YEAR == 2023) %>% clip_intersect()
+fires_2024 <- hist_fires %>% filter(FIRE_YEAR == 2024) %>% clip_intersect()
+fires_2025 <- curr_fires                               %>% clip_intersect()
+```
+
+
+```{r}
+crs_bc <- 3005
+ 
+study_zones <- st_transform(study_zones, crs_bc)
+fires_hist  <- st_transform(fires_hist,  crs_bc)
+fires_2023  <- st_transform(fires_2023,  crs_bc)
+fires_2024  <- st_transform(fires_2024,  crs_bc)
+fires_2025  <- st_transform(fires_2025,  crs_bc)
+```
+
+
+```{r}
+study_bbox <- st_bbox(study_zones)
+pad <- 60000   # metres padding around edge
+xlim_bc <- c(study_bbox["xmin"] - pad, study_bbox["xmax"] + pad)
+ylim_bc <- c(study_bbox["ymin"] - pad, study_bbox["ymax"] + pad)
+ 
+```
+
+
+```{r}
+fire_colours <- c(
+  #"1950-2022" = "#9E9E9E",
+  "2023"      = "#FFD966",
+  "2024"      = "#E08030",
+  "2025"      = "#C0281C"
+)
+ 
+# Two study zones — colours match the pink/lavender in your target map
+# These will map to whatever the two MFFRZNNM values are
+zone_colours <- c(
+  "Fort St. John Fire Zone"    = "#E8D0E8",   # soft lavender-pink
+  "Fort Nelson Fire Zone"  = "#C8E0C8"    # 
+)
+```
+
+
+```{r}
+fires_hist$period <- "1950-2022"
+fires_2023$period <- "2023"
+fires_2024$period <- "2024"
+fires_2025$period <- "2025"
+ 
+fires_all <- bind_rows(
+  fires_hist %>% select(period) %>% st_as_sf(),
+  fires_2023 %>% select(period) %>% st_as_sf(),
+  fires_2024 %>% select(period) %>% st_as_sf(),
+  fires_2025 %>% select(period) %>% st_as_sf()
+) %>%
+  mutate(period = factor(period, levels = c("1950-2022", "2023", "2024", "2025")))
+
+# no historic
+fires_all <- bind_rows(
+  fires_2023 %>% select(period) %>% st_as_sf(),
+  fires_2024 %>% select(period) %>% st_as_sf(),
+  fires_2025 %>% select(period) %>% st_as_sf()
+) %>%
+  mutate(period = factor(period, levels = c("2023", "2024", "2025")))
+```
+
+
+```{r}
+figure_2 <- ggplot() +
+ 
+  # Study zones — distinct colours, clearly visible
+  geom_sf(
+    data      = study_zones,
+    aes(fill  = MFFRZNNM),
+    colour    = "grey60",
+    linewidth = 0.5,
+    alpha     = 0.6
+  ) +
+  scale_fill_manual(
+    name   = "Fire Zones",
+    values = zone_colours,
+    guide  = guide_legend(
+      order        = 2,
+      override.aes = list(colour = "grey60", linewidth = 0.3)
+    )
+  ) +
+ 
+  new_scale_fill() +
+ 
+  # Fire perimeters — historical grey first, recent on top
+  geom_sf(
+    data     = fires_all,
+    aes(fill = period),
+    colour   = "gray30"
+  ) +
+  scale_fill_manual(
+    name   = "Fires",
+    values = fire_colours,
+    labels = c( "2023 perimeters",
+               "2024 perimeters",      "2025 perimeters"), # if historic add "1950–2022 perimeters"
+    guide  = guide_legend(
+      order        = 1,
+      override.aes = list(colour = NA)
+    )
+  ) +
+ 
+  annotation_north_arrow(
+    location    = "br",
+    which_north = "true",
+    pad_x       = unit(4, "in"),
+    pad_y       = unit(1.2, "in"),
+    style       = north_arrow_fancy_orienteering(
+      fill      = c("grey30", "white"),
+      line_col  = "grey30",
+      text_col  = "grey30",
+      text_size = 8
+    )
+  ) +
+  annotation_scale(
+    location   = "br",
+    width_hint = 0.25,
+    pad_x      = unit(4, "in"),
+    pad_y      = unit(0.95, "in"),
+    text_cex   = 0.7,
+    line_col   = "grey30",
+    text_col   = "grey30"
+  ) +
+ 
+  coord_sf(
+    xlim   = xlim_bc,
+    ylim   = ylim_bc,
+    expand = FALSE
+  )  +
+ 
+  theme_void(base_size = 11) +
+  theme(
+    plot.title           = element_text(face = "bold", size = 13,
+                                        margin = margin(b = 6), hjust = 0),
+    plot.caption         = element_text(colour = "grey50", size = 8,
+                                        hjust = 1, margin = margin(t = 6)),
+    plot.margin          = margin(12, 12, 12, 12),
+    plot.background      = element_rect(fill = "transparent", colour = NA),
+    panel.background     = element_rect(fill = "transparent", colour = NA),
+    legend.position      = c(0.25, 0.45),
+    legend.justification = c("left", "top"),
+    legend.background    = element_rect(fill = "white", colour = NA, linewidth = 0),
+    legend.title         = element_text(face = "bold", size = 12),
+    legend.text          = element_text(size = 12),
+    legend.spacing.y     = unit(0.15, "cm"),
+    legend.key.size      = unit(0.45, "cm"),
+    legend.box           = "vertical",
+    legend.box.spacing   = unit(0.1, "cm")
+  )
+figure_2
+```
+
+
+# build full map
+
+#-------------------------------------------------------------------------------
+## 0. GLOBAL CONSTANTS -- change once here, every panel updates
+#-------------------------------------------------------------------------------
+
+
+
+```{r}
+
+HOTSPOT_PAL <- c("2023\u21922024" = "#0072B2",   # blue
+                  "2024\u21922025" = "black")
+
+IGNITION_SIZE   <- 2
+IGNITION_STROKE <- NA
+
+IGNITION_SHAPE <- 16   # hollow circle
+
+BBOX_PAD <- 0.0005   # degrees, padding around each chain's fire extent
+
+PERIM_PAL <- c(
+  "1950-2022 historic" = "#9E9E9E",
+  "2023 origin"        = "#FFD966",
+  "2024 reactivation"  = "#E08030",
+  "2025 reactivation"  = "#C0281C"
+)
+ 
+
+PERIM_ALPHA <- c(
+  "Background"         = 1 , #0.30,
+  "2023 origin"        = 1, #0.75,
+  "2024 reactivation"  = 1, #0.75,
+  "2025 reactivation"  = 1 #0.75
+)
+ 
+study_zones_wgs <- st_transform(study_zones, 4326)
+ 
+theme_pub <- function() {
+  theme_bw(base_size = 9, base_family = "sans") +
+    theme(
+      panel.grid        = element_blank(),
+      panel.border      = element_rect(colour = NA, fill = NA),
+      panel.background  = element_rect(fill = NA, colour = NA), 
+      plot.background = element_rect(fill=NA, colour = NA), # Fort Nelson green
+      axis.text.x  = element_blank(),
+      axis.text.y  = element_blank(),
+      axis.ticks   = element_blank(),
+      axis.title = element_blank(),
+      legend.title      = element_text(size = 12, face = "bold"),
+      legend.text       = element_text(size = 12),
+      legend.key        = element_rect(fill = NA),
+      legend.key.size   = unit(0.4, "cm"),
+      legend.background = element_rect(fill = "white", colour = "grey70",
+                                       linewidth = 0.3),
+      legend.margin     = margin(3, 5, 3, 5)
+    )
+}
+
+zone_colours <- c(
+  "Fort St. John Fire Zone"    = "#E8D0E8",   # soft lavender-pink
+  "Fort Nelson Fire Zone"  = "#C8E0C8"    # 
+)
+```
+
+#-------------------------------------------------------------------------------
+## 1. REUSABLE IGNITION MARKER LAYER + LEGEND
+#-------------------------------------------------------------------------------
+
+```{r}
+#| label: ignition-layer
+ignition_layer <- function(spring_chain) {
+  pts <- spring_chain %>%
+    mutate(x = st_coordinates(.)[, 1],
+           y = st_coordinates(.)[, 2]) %>%
+    st_drop_geometry()
+
+  geom_point(
+    data   = pts,
+    aes(x = x, y = y, colour = transition),
+    shape  = IGNITION_SHAPE,
+    size   = IGNITION_SIZE
+  )
+}
+#| label: ignition-scale-only-change-here
+ignition_scale <- function() {
+  scale_colour_manual(
+    name   = "Overwintering Ignition",
+    values = HOTSPOT_PAL,
+    guide  = guide_legend(
+      order        = 2,
+      override.aes = list(shape = IGNITION_SHAPE, size = IGNITION_SIZE)
+    )
+  )
+}
+```
+
+#-------------------------------------------------------------------------------
+## 2. BUILD ONE CHAIN'S ZOOMED INSET PANEL
+
+#-------------------------------------------------------------------------------
+
+```{r}
+build_chain_panel <- function(i, chains, fires_crop, spring_sf, study_zones,
+                               zone_colours, PERIM_PAL, pad = BBOX_PAD) {
+
+  fid_23 <- chains$fire_id_2023[i]
+  fid_24 <- chains$fire_id_2024[i]
+  fid_25 <- chains$fire_id_2025[i]
+
+  fires_chain  <- fires_crop |> filter(fire_id %in% c(fid_23, fid_24, fid_25))
+  spring_chain <- spring_sf  |> filter(fire_id %in% c(fid_24, fid_25))
+
+  # tighter bbox -- zoom to just the fires + small pad
+  bbox_zoom <- st_bbox(fires_chain)
+  bbox_zoom <- st_bbox(
+    c(xmin = unname(bbox_zoom["xmin"]) - pad,
+      ymin = unname(bbox_zoom["ymin"]) - pad,
+      xmax = unname(bbox_zoom["xmax"]) + pad,
+      ymax = unname(bbox_zoom["ymax"]) + pad),
+    crs = st_crs(4326)
+  )
+
+
+
+  zones_zoom <- study_zones_wgs |>
+    st_crop(st_as_sfc(bbox_zoom)) |>
+    group_by(MFFRZNNM) |>
+    summarise()
+
+  p <- ggplot() +
+    geom_sf(data = zones_zoom, aes(fill = MFFRZNNM),
+            colour = "grey60", linewidth = 0.5, alpha = 0.5) +
+    scale_fill_manual(name = "Fire Zones", values = zone_colours,
+                       guide = guide_legend(order = 2)) +
+    ggnewscale::new_scale_fill() +
+    geom_sf(data = fires_chain, aes(fill = chain_class),
+            colour = "grey40", linewidth = 0.3) +
+    scale_fill_manual(name = "Fire perimeter", values = PERIM_PAL,
+                       guide = guide_legend(order = 1)) +
+    ggnewscale::new_scale_fill() +
+    ignition_layer(spring_chain) +
+    ignition_scale() +
+    coord_sf(crs = 4326,
+             xlim = c(bbox_zoom["xmin"], bbox_zoom["xmax"]),
+             ylim = c(bbox_zoom["ymin"], bbox_zoom["ymax"]),
+             expand = FALSE) +
+    theme_pub() +
+    theme(
+      legend.position       = "right",
+      legend.justification  = c(0, 1),
+      legend.box            = "vertical",
+      legend.box.background = element_blank(),
+      legend.box.margin     = margin(0, 0, 0, 0),
+      legend.box.spacing    = unit(0.1, "cm"),
+      legend.background     = element_blank(),
+      legend.key            = element_rect(fill = NA, colour = NA),
+      plot.title             = element_text(size = 8, face = "bold")
+    )
+
+  p
+}
+```
+
+```{r}
+st_crs(study_zones)
+st_crs(bbox_zoom)
+
+```
+#-------------------------------------------------------------------------------
+## 3. BUILD ALL 5 CHAIN PANELS
+.
+#-------------------------------------------------------------------------------
+
+```{r}
+chain_indices <- 1:5
+
+plot_list <- lapply(chain_indices, function(i) {
+  build_chain_panel(
+    i            = i,
+    chains       = chains,
+    fires_crop   = fires_crop,
+    spring_sf    = spring_sf,
+    study_zones  = study_zones_wgs,
+    zone_colours = zone_colours,
+    PERIM_PAL    = PERIM_PAL
+  )
+})
+
+# panels for use as insets (no legend, thin border) vs standalone (own legend)
+panels_no_legend <- lapply(plot_list, function(p) {
+  p + theme(
+    legend.position  = "none",
+    plot.background  = element_rect(fill = "white", colour = "grey40",
+                                     linewidth = 0.4)
+  )
+})
+
+legend_grob <- cowplot::get_legend(
+  plot_list[[1]] + theme(legend.position = "right")
+)
+
+# e.g. p_5 <- plot_list[[5]] + theme(legend.position = "right"); p_5
+```
+
+#-------------------------------------------------------------------------------
+# 4. MAIN MAP -- ignition markers + chain-centroid labels
+#-------------------------------------------------------------------------------
+# figure_2: your base fire-perimeter/fire-zone ggplot (built elsewhere)
+
+```{r}
+chain_centroids <- lapply(seq_len(nrow(chains)), function(i) {
+  fires_crop |>
+    filter(fire_id %in% c(chains$fire_id_2023[i],
+                           chains$fire_id_2024[i],
+                           chains$fire_id_2025[i])) |>
+    st_union() |>
+    st_centroid() |>
+    st_coordinates() |>
+    as.data.frame() |>
+    mutate(chain = i)
+}) |> bind_rows()
+
+p_main_annotated <- figure_2 +
+  geom_point(
+    data   = chain_centroids,
+    aes(x = X, y = Y),
+    colour = "black", size = 2, shape = 21, fill = "white", stroke = 0.6,
+    inherit.aes = FALSE
+  ) +
+  geom_text(
+    data    = chain_centroids,
+    aes(x = X, y = Y, label = letters[chain]),
+    size    = 3, fontface = "bold",
+    nudge_x = 0.15, nudge_y = 0.1,
+    inherit.aes = FALSE
+  )
+
+```
+#-------------------------------------------------------------------------------
+# 5. INSET LAYOUT POSITIONS (fractions of the canvas, 0-1)
+#-------------------------------------------------------------------------------
+
+```{r}
+#| label: inset-positions
+inset_w <- 0.22
+inset_h <- 0.28
+
+inset_positions <- list(
+  list(x = 0.00, y = 0.65),   # a - top left
+  list(x = 0.00, y = 0.35),   # b - mid left
+  list(x = 0.00, y = 0.05),   # c - bottom left
+  list(x = 0.78, y = 0.65),   # d - top right
+  list(x = 0.78, y = 0.35)    # e - mid right
+)
+```
+
+#-------------------------------------------------------------------------------
+# 6. ARROWS: from each inset edge to its chain centroid on the main map
+#-------------------------------------------------------------------------------
+
+```{r}
+PROJ_CRS <- 3005  # BC Albers; change if your study area isn't BC
+
+chain_centroids_proj <- lapply(seq_len(nrow(chains)), function(i) {
+  fires_crop |>
+    st_transform(PROJ_CRS) |>
+    filter(fire_id %in% c(chains$fire_id_2023[i],
+                           chains$fire_id_2024[i],
+                           chains$fire_id_2025[i])) |>
+    st_union() |>
+    st_centroid() |>
+    st_coordinates() |>
+    as.data.frame() |>
+    mutate(chain = i)
+}) |> bind_rows()
+
+p_main_bare <- p_main_annotated +
+  theme_void() +
+  theme(
+    legend.position = "none",
+    plot.margin     = margin(0, 0, 0, 0)
+  )
+
+p_main_built <- ggplot_build(p_main_bare)
+main_xlim    <- p_main_built$layout$panel_params[[1]]$x_range
+main_ylim    <- p_main_built$layout$panel_params[[1]]$y_range
+
+to_canvas_frac <- function(x, y, xlim, ylim) {
+  data.frame(
+    cx = (x - xlim[1]) / diff(xlim),
+    cy = (y - ylim[1]) / diff(ylim)
+  )
+}
+
+centroid_canvas <- to_canvas_frac(
+  chain_centroids_proj$X,
+  chain_centroids_proj$Y,
+  main_xlim, main_ylim
+)
+
+#| label: arrows
+# for each inset, choose the start point on its border that's
+# closest to the corresponding centroid on the main map -- removes the
+# need for manual per-panel overrides (which is where the "e" bug lived)
+
+nearest_edge_point <- function(pos, w, h, tx, ty) {
+  # candidate points: midpoints of all four edges
+  candidates <- data.frame(
+    x = c(pos$x, pos$x + w, pos$x + w / 2, pos$x + w / 2),
+    y = c(pos$y + h / 2, pos$y + h / 2, pos$y + h, pos$y)
+  )
+  d <- sqrt((candidates$x - tx)^2 + (candidates$y - ty)^2)
+  candidates[which.min(d), ]
+}
+
+#| label: arrows
+arrow_data <- do.call(rbind, lapply(seq_along(inset_positions), function(i) {
+  pos <- inset_positions[[i]]
+
+  if (i %in% c(4, 5)) {
+    # d and e: always originate from the LEFT edge, pointing toward the main map
+    start <- data.frame(x = pos$x, y = pos$y + inset_h / 2)
+  } else {
+    # a, b, c: use nearest-edge logic as before
+    start <- nearest_edge_point(
+      pos, inset_w, inset_h,
+      centroid_canvas$cx[i], centroid_canvas$cy[i]
+    )
+  }
+
+  data.frame(
+    x    = start$x,
+    y    = start$y,
+    xend = centroid_canvas$cx[i],
+    yend = centroid_canvas$cy[i]
+  )
+}))
+
+```
+
+#-------------------------------------------------------------------------------
+# 7. ASSEMBLE FINAL CANVAS
+#-------------------------------------------------------------------------------
+
+```{r}
+canvas <- ggdraw(p_main_bare)
+
+for (i in seq_along(inset_positions)) {
+  pos <- inset_positions[[i]]
+  canvas <- canvas +
+    draw_plot(
+      panels_no_legend[[i]],
+      x = pos$x, y = pos$y,
+      width = inset_w, height = inset_h
+    )
+}
+
+canvas <- canvas +
+  geom_segment(
+    data        = arrow_data,
+    aes(x = x, y = y, xend = xend, yend = yend),
+    arrow       = arrow(length = unit(0.2, "cm"), type = "closed"),
+    colour      = "grey20",
+    linewidth   = 0.5,
+    inherit.aes = FALSE
+  )
+
+for (i in seq_along(inset_positions)) {
+  pos <- inset_positions[[i]]
+  canvas <- canvas +
+    draw_label(
+      letters[i],
+      x        = pos$x + 0.01,
+      y        = pos$y + inset_h - 0.01,
+      fontface = "bold", size = 10,
+      hjust = 0, vjust = 1
+    )
+}
+canvas <- canvas +
+  cowplot::draw_grob(legend_grob, x = 0.30, y = 0.02, width = 0.25, height = 0.35)
+
+canvas
+```
+
+
+
+```{r}
+#| label: debug-centroids
+print(chains[5, c("fire_id_2023", "fire_id_2024", "fire_id_2025")])
+print(chain_centroids_proj[5, ])
+print(centroid_canvas[5, ])
+print(main_xlim)
+print(main_ylim)
+```
+
+
+
+```{r}
+library(svglite)
+
+ggsave(
+  filename = '../visualizations/maps_versions/multiyear_chains_v4.svg',
+  plot     = canvas,
+  width    = 12,
+  height   = 8,
+  units    = 'in',
+  device   = svglite
 )
 ```
