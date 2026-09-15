@@ -7,7 +7,7 @@
 # To switch environments, change the `environment` key below.
 # Scripts resolve full data paths as: os.path.join(data_root, data.<section>.<key>)
 
-# ── Environment ────────────────────────────────────────────────────────────────
+#  Environment 
 environment: remote   # change to 'remote' when working from the hard drive
 
 environments:
@@ -15,8 +15,9 @@ environments:
     data_root: data
   remote:
     data_root: /Volumes/top-secret/PostDoc/multi-year-overwintering/data
+    project_root: /Volumes/top-secret/PostDoc/multi-year-overwintering
 
-# ── Data sub-paths (relative to data_root) ────────────────────────────────────
+#  Data sub-paths (relative to data_root) 
 data:
 
   fires:
@@ -45,7 +46,7 @@ data:
     hist_fires: raw/BC_Fire_Perimeters_Historical/PROT_HISTORICAL_FIRE_POLYS_SP/H_FIRE_PLY_polygon.shp
     curr_fires: raw/BC_Fire_Perimeters_2025/PROT_CURRENT_FIRE_POLYS_SP/C_FIRE_PLY_polygon.shp
 
-# ── Intermediate products (01_sdd → 02_hotspots) ──────────────────────────────
+#  Intermediate products (01_sdd → 02_hotspots) 
 intermediate:
   dir: results/intermediate_products
 
@@ -54,8 +55,9 @@ intermediate:
   perims_2023_confirmed: results/intermediate_products/perims_2023_confirmed.geojson
   perims_2024_confirmed: results/intermediate_products/perims_2024_confirmed.geojson
   spring_hotspots_2024_in_2023: results/intermediate_products/spring_hotspots_2024_in_2023_perims.geojson
+  spring_hotspots_2025_in_2024: results/intermediate_products/spring_hotspots_2025_in_2024_perims.geojson
 
-# ── Stage outputs ──────────────────────────────────────────────────────────────
+#  Stage outputs 
 results:
   dir: results
 
@@ -80,7 +82,7 @@ results:
   overwintering_perimeter_chains_summary: results/inplace_overwintering_perimeter_chains_summary.csv
   spring_hotspots_2025_in_chains:         results/inplace_spring_hotspots_2025.geojson
 
-# ── Algorithm parameters ───────────────────────────────────────────────────────
+#  Algorithm parameters 
 params:
   buffer_m: 1000            # hotspot buffer for 2024→2025 linkage (metres)
   sdd_window_min: -5        # days after SDD (lower bound; negative = before melt)
