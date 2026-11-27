@@ -1,7 +1,7 @@
 # clip nbac files to the study zones 
 # read in the study zones and then dissolve them into one big zone, 
 # clip the study nbac .shp to all the study zones, and then save the clipped files to a new folder.
-
+# THIS CODE ASSUMES YOU HAVE A INDEPENDENT SHAPEFILE FOR EACH NBAC YEAR - IN THIS CASE 2023-2025 
 import geopandas as gpd
 import os
 import geopandas as pd
