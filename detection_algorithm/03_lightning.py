@@ -33,8 +33,7 @@ def load_lightning_grid(year):
     """
     Load raw CG flash data and compute first-occurrence date per grid cell.
 
-    Returns
-    -------
+    Returns:
     first_occ : xr.DataArray (lat, lon) — datetime64, NaT where no strike
     lats      : np.ndarray 1-D
     lons      : np.ndarray 1-D
@@ -56,20 +55,17 @@ def first_lightning_in_buffer(lat_hs, lon_hs, first_occ, lats, lons):
     Find the earliest CG lightning first-occurrence date within a 2 km
     buffer of the hotspot location.
 
-    Steps
-    -----
+    Steps:
     1. Build 2 km buffer around hotspot (EPSG:3005 → WGS84 for grid matching)
     2. Identify grid cell centres that fall inside the buffer
     3. Return the minimum (earliest) first-occurrence date among those cells
 
-    Parameters
-    ----------
+    Params
     lat_hs, lon_hs : float — hotspot coords in WGS84
     first_occ      : xr.DataArray (lat, lon) — first strike datetime per cell
     lats, lons     : np.ndarray — 1-D grid coordinate arrays
 
-    Returns
-    -------
+    Returns:
     pd.Timestamp | None
     """
     # Build 2 km buffer: project point to EPSG:3005, buffer, reproject to WGS84

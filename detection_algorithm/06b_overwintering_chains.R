@@ -18,13 +18,7 @@ LIGHTNING_WINDOW   <- cfg$params$lightning_window_days
 LIGHTNING_BUFFER_M <- cfg$params$lightning_buffer_m
 
 
-#  Lightning exclusion 
-# Returns a logical vector (length = nrow(hotspots_sf)):
-#   TRUE  → lightning strike within buffer_m and window_days → exclude
-#   FALSE → keep
-#
-# NetCDF cg_flashes has dimensions (time, lat, lon) in C order.
-# ncdf4 reverses to Fortran order, so R array is [lon, lat, time].
+#  Lightning exclusion function same as 06a
 
 check_lightning <- function(hotspots_sf, nc_path, buffer_m, window_days) {
   nc <- nc_open(nc_path)
@@ -147,7 +141,7 @@ sdd_2025_lookup <- tibble(
   sdd_2025     = sdd_vals[, 2]
 )
 
-#  Spatial join: 2025 hotspots within buffered 2024 hotspot areas 
+#Spatial join 2025 hotspots within buffered 2024 hotspot areas 
 hs2024_join <- hs2024_buffered |>
   select(hotspot_id_2024, fire_id_2023, acq_date_2024 = acq_date, geometry)
 
@@ -159,7 +153,7 @@ hs2025_in_buf <- st_join(
 )
 
 
-#  SDD filter for 2025: -5 to 60 days after snow melt 
+#SDD filter for 2025  -5 to 60 days after snow melt 
 hs2025_filtered <- hs2025_in_buf |>
   left_join(sdd_2025_lookup, by = 'fire_id_2023') |>
   mutate(days_after_sdd_2025 = doy - sdd_2025) |>
@@ -167,7 +161,7 @@ hs2025_filtered <- hs2025_in_buf |>
   mutate(hotspot_id_2025 = paste0('hs25_', row_number()))
 
 
-#  Lightning exclusion for 2025 hotspots 
+#Lightning exclusion for 2025 hotspots 
 if (nrow(hs2025_filtered) > 0) {
   lightning_flag <- check_lightning(
     hotspots_sf = hs2025_filtered,
@@ -179,7 +173,7 @@ if (nrow(hs2025_filtered) > 0) {
 }
 
 
-#  Save 2025 hotspot locations for mapping 
+#Save 2025 hotspot locations for mapping 
 hs2025_spatial <- hs2025_filtered |>
   rename(acq_date_2025 = acq_date) |>
   select(fire_id_2023, hotspot_id_2024, hotspot_id_2025,
@@ -187,7 +181,7 @@ hs2025_spatial <- hs2025_filtered |>
 
 st_write(hs2025_spatial, cfg$results$spring_hotspots_2025_in_chains, delete_dsn = TRUE, quiet = TRUE)
 
-#  Build and save tabular output 
+#Build and save tabular output 
 chains <- hs2025_filtered |>
   st_drop_geometry() |>
   rename(acq_date_2025 = acq_date) |>
@@ -211,10 +205,10 @@ write_csv(chains, cfg$results$overwintering_perimeter_chains)
 # Per-fire summary 
 # Multiple hotspots on the same day within a perimeter are evidence of activity
 # extent, not independent events. Summarise to one row per fire_id_2023:
-#   - first detection date and days-after-SDD for each year (timing)
-#   - n_hotspot_days (unique detection dates, a measure of persistence)
-#   - n_hotspots (total detections, a measure of intensity/spatial extent)
-#   - is_multiyear (TRUE when qualifying hotspots exist in both 2024 and 2025)
+#   -first detection date and days-after-SDD for each year = timing
+#   -n_hotspot_days = unique detection dates, a measure of persistence
+#   -n_hotspots = total detections, a measure of intensity/spatial extent
+#   -is_multiyear = TRUE when qualifying hotspots exist in both 2024 and 2025
 
 summary_2024 <- spring_hs_2024 |>
   st_drop_geometry() |>

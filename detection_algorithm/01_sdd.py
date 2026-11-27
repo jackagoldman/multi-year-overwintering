@@ -1,5 +1,4 @@
 # 02_sdd.py — Per-Fire Mean Snow Disappearance Date
-# ==================================================
 # Extracts mean SDD DOY from MODIS rasters for each 2024 and 2025
 # fire perimeter using zonal statistics.
 #

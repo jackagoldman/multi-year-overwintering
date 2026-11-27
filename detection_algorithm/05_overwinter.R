@@ -17,7 +17,7 @@ OUT_DIR <- cfg$results$dir
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
 
-#  Load ignition points ─
+#  Load ignition points 
 ignitions_2024 <- st_read(cfg$results$ignitions_2024, quiet = TRUE)
 ignitions_2025 <- st_read(cfg$results$ignitions_2025, quiet = TRUE)
 
@@ -96,7 +96,7 @@ write_csv(multiyear,    cfg$results$multiyear_overwinter)
 st_write(single_23_24, cfg$results$single_23_24_overwinter, delete_dsn = TRUE)
 st_write(single_24_25, cfg$results$single_24_25_overwinter, delete_dsn = TRUE)
 
-# ── Save ───────────────────────────────────────────────────────────────────────
+# Save 
 # if DIST_THRESH_M == 500 then save as multiyear_overwinter500.csv single_23_24_overwinter500.geojson single_24_25_overwinter500.geojson and if DIST_THRESH_M == 2000 then save as multiyear_overwinter2000.csv single_23_24_overwinter2000.geojson single_24_25_overwinter2000.geojson
 # else no suffix
 suffix <- if (DIST_THRESH_M %in% c(500, 2000)) paste0(DIST_THRESH_M) else ""

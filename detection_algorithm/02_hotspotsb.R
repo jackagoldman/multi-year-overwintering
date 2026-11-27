@@ -21,7 +21,7 @@ perims_2025 <- st_read(d(cfg$data$perimeters$perims_2025), quiet = TRUE)
 
 hotspots_all <- st_read(d(cfg$data$fires$all_hotspots), quiet = TRUE) |>
   st_transform(3005) |>
-  mutate(acq_date = as.Date(acq_date)) # non-conservative hotspots.... would be data/analysis/all_hotspots_2023_2025_night_nh.geojson better? but that would require re-running the fall hotspot candidate analysis to get the clipped version. For now, just load all and filter to fall later.
+  mutate(acq_date = as.Date(acq_date)) 
 
 hotspots_2023 <- hotspots_all |> filter(year == 2023)
 hotspots_2024 <- hotspots_all |> filter(year == 2024)

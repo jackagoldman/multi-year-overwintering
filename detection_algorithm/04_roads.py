@@ -1,5 +1,4 @@
 # 04_roads.py — Road Proximity for 2025 Ignition Points
-# =======================================================
 # For 2024 ignitions: fire_cause is already populated — no road check needed.
 # For 2025 ignitions: fire_cause is blank, so road distance is used as a
 # proxy for human-caused ignitions.

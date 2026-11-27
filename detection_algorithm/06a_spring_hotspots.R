@@ -17,12 +17,12 @@ LIGHTNING_WINDOW   <- cfg$params$lightning_window_days
 LIGHTNING_BUFFER_M <- cfg$params$lightning_buffer_m
 
 
-#  Lightning exclusion helper ─
+#  Lightning exclusion helper function
 # Returns a logical vector (length = nrow(hotspots_sf)):
-#   TRUE  → lightning strike within buffer_m and window_days → exclude
-#   FALSE → keep
+#   if TRUE  lightning strike within buffer_m and window_days , exclude
+#   if FALSE  keep
 #
-# NetCDF cg_flashes has dimensions (time, lat, lon) in C order.
+# Note, caused confusion: NetCDF cg_flashes has dimensions (time, lat, lon) in C order.
 # ncdf4 reverses to Fortran order, so R array is [lon, lat, time].
 
 check_lightning <- function(hotspots_sf, nc_path, buffer_m, window_days) {
@@ -39,8 +39,8 @@ check_lightning <- function(hotspots_sf, nc_path, buffer_m, window_days) {
   origin     <- as.POSIXct(origin_str, tz = "UTC")
   time_dates <- as.Date(origin + as.numeric(time_raw) * 3600)
 
-  # Clip to hotspot bounding box + 0.3° pad (>> 2 km lightning buffer at this latitude).
-  # Reads only the study-area subset instead of the full continental grid.
+  # Clip to hotspot bounding box + 0.3° pad , approx 2 km lightning buffer at this latitude.
+  # Reads only the study-area subset instead of the full  grid.
   bbox     <- st_bbox(st_transform(hotspots_sf, 4326))
   pad      <- 0.3
   lon_idx  <- which(lon_vals >= bbox["xmin"] - pad & lon_vals <= bbox["xmax"] + pad)
@@ -53,7 +53,7 @@ check_lightning <- function(hotspots_sf, nc_path, buffer_m, window_days) {
   lon_sub   <- lon_vals[lon_start:(lon_start + lon_count - 1)]
   lat_sub   <- lat_vals[lat_start:(lat_start + lat_count - 1)]
 
-  # ncdf4 start/count follow R (Fortran) dimension order: [lon, lat, time]
+  # ncdf4 start/count follow R  dimension order: [lon, lat, time]
   flashes <- ncvar_get(nc, "cg_flashes",
                        start = c(lon_start, lat_start, 1),
                        count = c(lon_count, lat_count, n_time))
@@ -104,7 +104,7 @@ check_lightning <- function(hotspots_sf, nc_path, buffer_m, window_days) {
 }
 
 
-#  Load 2023 perimeters ─
+#  Load 2023 perimeters 
 clean_names <- function(df, year) {
   names(df) <- tolower(names(df))
   df <- df |>
@@ -131,7 +131,7 @@ perims_v  <- project(vect(perims_2023), crs(sdd_rast))
 sdd_vals  <- terra::extract(sdd_rast, perims_v, fun = mean, na.rm = TRUE)
 perims_2023$sdd_2024 <- sdd_vals[, 2]
 
-#  Load 2024 hotspots ─
+#  Load 2024 hotspots 
 hotspots_2024 <- st_read(d(cfg$data$fires$all_hotspots), quiet = TRUE) |>
   filter(year == 2024) |>
   st_transform(3005) |>
@@ -141,7 +141,7 @@ hotspots_2024 <- st_read(d(cfg$data$fires$all_hotspots), quiet = TRUE) |>
   ) |>
   select(acq_date, doy, geometry)
 
-#  Spatial join: 2024 hotspots within 2023 perimeters 
+#Spatial join: 2024 hotspots within 2023 perimeters 
 hs_in_perims <- st_join(
   hotspots_2024,
   perims_2023 |> select(fire_id_2023 = fire_id, sdd_2024, geometry),
@@ -150,14 +150,14 @@ hs_in_perims <- st_join(
 )
 
 
-#  SDD filter: -5 to 60 days after snow melt ─
+#SDD filter: -5 to 60 days after snow melt 
 hs_spring <- hs_in_perims |>
   mutate(days_after_sdd = doy - sdd_2024) |>
   filter(days_after_sdd >= SDD_MIN, days_after_sdd <= SDD_MAX) |>
   mutate(hotspot_id_2024 = paste0('hs24_', row_number()))
 
 
-#  Lightning exclusion 
+#Lightning exclusion 
 if (nrow(hs_spring) > 0) {
   lightning_flag <- check_lightning(
     hotspots_sf = hs_spring,
@@ -169,7 +169,7 @@ if (nrow(hs_spring) > 0) {
 }
 
 
-#  Save
+#Save
 hs_out <- hs_spring |>
   select(hotspot_id_2024, fire_id_2023, acq_date, doy, sdd_2024, days_after_sdd, geometry)
 
