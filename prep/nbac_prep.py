@@ -1,26 +1,35 @@
 # clip nbac files to the study zones 
-
-
 # read in the study zones and then dissolve them into one big zone, 
-#/Volumes/top-secret/PostDoc/multi-year-overwintering/data//Volumes/top-secret/PostDoc/multi-year-overwintering/data/study_aoi/study_firezones.shp
-
 # clip the study nbac .shp to all the study zones, and then save the clipped files to a new folder.
 
 import geopandas as gpd
 import os
 import geopandas as pd
+import yaml
+from pathlib import Path
+
+# Find the project root by walking up from the notebook's folder until config.yml turns up
+ROOT = next(p for p in [Path.cwd(), *Path.cwd().parents] if (p / 'config.yml').exists())
+
+with open(ROOT / 'config.yml') as f:
+    cfg = yaml.safe_load(f)
+
+data_root = cfg['environments'][cfg['environment']]['data_root']
+
+def d(subpath):
+    return os.path.join(data_root, subpath)
 # read in the study zones
-study_zones = gpd.read_file('/Volumes/top-secret/PostDoc/multi-year-overwintering/data/study_aoi/study_firezones.shp')
+study_zones = gpd.read_file(d(cfg['data']['plotting']['study_zones']))
 
 # study zones crs
 print(study_zones.crs)
 # dissolve the study zones into one big zone
 study_zone = study_zones.dissolve()
 # read in the nbac .shp files
-nbac_folder = "data/nbac/"
+nbac_folder = d(cfg['data']['fires']['nbac'])
 nbac_files = [f for f in os.listdir(nbac_folder) if f.endswith('.shp')]
 # create a new folder to save the clipped files
-clipped_folder = "/Volumes/top-secret/PostDoc/multi-year-overwintering/data/nbac_clipped/"
+clipped_folder = d(cfg['data']['fires']['nbac_clipped'])
 if not os.path.exists(clipped_folder):
     os.makedirs(clipped_folder)
 
@@ -57,7 +66,7 @@ for clipped_file in clipped_files:
 
 
 # check columns for BC perims
-old_fire = "/Volumes/top-secret/PostDoc/multi-year-overwintering/data/processed_fire_perimeters/"
+old_fire = d(cfg['data']['perimeters']['perims_folder'])
 perims_files = [f for f in os.listdir(old_fire) if f.endswith('.shp')]
 perims_files = [f for f in perims_files if not f.startswith('._')]
 for perims_file in perims_files:
