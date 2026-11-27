@@ -5,7 +5,8 @@ library(sf)
 library(ggplot2)
 library(dplyr)
 library(ggspatial)  # for north arrow & scale bar
-library(ggnewscale)   
+library(ggnewscale)
+library(ggrepel)      # halo text for zone labels
 library(cowplot)
 library(rnaturalearth)
 library(rnaturalearthdata)
@@ -126,22 +127,11 @@ p_main <- ggplot() +
  
   geom_sf(
     data      = fire_centres,
-    aes(fill  = centre_name, colour = centre_name),
-    colour    = centre_colours,
-    linewidth = 0.4,
-    alpha     = 0.85
+    fill      = "white",
+    colour    = "grey40",
+    linewidth = 0.4
   ) +
-  scale_fill_manual(
-    name   = "Fire Centres",
-    values = centre_colours,
-    guide_legend(
-      order        = 2,
-      override.aes = list(colour = "grey60", linewidth = 0.3)
-    )
-  ) +
- 
-  new_scale_fill() +
- 
+
   geom_sf(
     data     = fires_all,
     aes(fill = year),
@@ -156,24 +146,33 @@ p_main <- ggplot() +
       order        = 1,
       override.aes = list(colour = NA)
     )
-  ) +geom_sf_label(
-  data          = fire_centres |> filter(centre_name != "Northwest"),
-  aes(label     = centre_name),
-  size          = 3,
-  colour        = "grey30",
-  fill          = alpha("white", 0.6),
-  label.size    = 0,
-  label.padding = unit(0.15, "lines")
+  ) +
+# Zone names with a white halo (no box) so they stay readable over fire perimeters.
+# force = 0 keeps labels at the polygon centroid instead of repelling them.
+geom_text_repel(
+  data               = fire_centres |> filter(centre_name != "Northwest"),
+  aes(label = centre_name, geometry = geometry),
+  stat               = "sf_coordinates",
+  size               = 3.6,
+  fontface           = "bold",
+  colour             = "grey15",
+  bg.colour          = "white",
+  bg.r               = 0.15,
+  force              = 0,
+  min.segment.length = Inf
 ) +
-geom_sf_label(
-  data          = fire_centres |> filter(centre_name == "Northwest"),
-  aes(label     = centre_name),
-  size          = 3,
-  colour        = "grey30",
-  fill          = alpha("white", 0.6),
-  label.size    = 0,
-  label.padding = unit(0.15, "lines"),
-  nudge_y       = 15500  # adjust up/down here
+geom_text_repel(
+  data               = fire_centres |> filter(centre_name == "Northwest"),
+  aes(label = centre_name, geometry = geometry),
+  stat               = "sf_coordinates",
+  size               = 3.6,
+  fontface           = "bold",
+  colour             = "grey15",
+  bg.colour          = "white",
+  bg.r               = 0.15,
+  force              = 0,
+  min.segment.length = Inf,
+  nudge_y            = 15500  # adjust up/down here
 ) +
  
  annotation_north_arrow(
@@ -246,7 +245,7 @@ p_inset <- ggplot() +
   geom_sf(data = canada_proj, fill = "#D4D4D4", colour = "white", linewidth = 0.2) +
  
   # BC highlighted in a warm amber to stand out
-  geom_sf(data = bc_highlight, fill = "green", colour = "white", linewidth = 0.4) +
+  geom_sf(data = bc_highlight, fill = "black", colour = "white", linewidth = 0.4) +
  
   # Crop to Canada + a bit of northern USA
   coord_sf(
@@ -284,7 +283,7 @@ final_map
 
 ```{r}
 ggsave(
-  filename = "../visualizations/maps/fig1_bc_fire_map.png",
+  filename = "../visualizations/maps/Fig1_bc_fire_map.png",
   plot     = final_map,
   width    = 8,
   height   = 9,
@@ -883,7 +882,7 @@ print(main_ylim)
 library(svglite)
 
 ggsave(
-  filename = '../visualizations/maps_versions/multiyear_chains_v4.svg',
+  filename = '../visualizations/Figure2_multiyear_chains.svg',
   plot     = canvas,
   width    = 12,
   height   = 8,
@@ -954,7 +953,7 @@ ggplot() +
 ```
 
 ```{r}
-figure_4 <- ggplot() +
+figure_3 <- ggplot() +
 
   # Study zones
   geom_sf(
@@ -1064,7 +1063,7 @@ figure_4 <- ggplot() +
     legend.box.spacing   = unit(0.1, "cm")
   )
 
-figure_4
+figure_3
 ```
 
 
@@ -1137,7 +1136,7 @@ inset <- ggplot() +
   )
 
 # Add a red rectangle on the main map showing where the inset is
-figure_4_with_box <- figure_4 +
+figure_3_with_box <- figure_3 +
   annotate("rect",
     xmin = zoom_xlim[1], xmax = zoom_xlim[2],
     ymin = zoom_ylim[1], ymax = zoom_ylim[2],
@@ -1145,23 +1144,19 @@ figure_4_with_box <- figure_4 +
   )
 
 # Compose with patchwork — inset placed top-right
-figure_4_final <- figure_4_with_box | inset +
+figure_3_final <- figure_3_with_box | inset +
   plot_layout(widths = c(2, 1))   # main map twice as wide as inset
 
-figure_4_final
+figure_3_final
 ```
 
-```{r}
- 
-
-```
 
 save as svg
 
 ```{r}
 ggsave(
-  filename = 'maps_versions/figure_4_overwintering_v2.svg',
-  plot     = figure_4_final,
+  filename = 'maps/Figure3_2023_perim_hotspot.svg',
+  plot     = figure_3_final,
   width    = 12,
   height   = 8,
   units    = 'in',

@@ -23,6 +23,8 @@ data:
   fires:
     all_fires_processed: analysis/all_fires_processed.geojson
     all_hotspots:        analysis/all_hotspots_2023_2025_night_nh.geojson
+    nbac_clipped: nbac_clipped/
+    nbac: nbac/
 
   snow_dd:
     sdd_raster_2023: snow_dd/SDD_2023.tif
@@ -30,6 +32,7 @@ data:
     sdd_raster_2025: snow_dd/SDD_2025.tif
 
   perimeters:
+    perims_folder: processed_fire_perimeters/
     perims_2023: processed_fire_perimeters/perims_2023_clipped_3005.shp
     perims_2024: processed_fire_perimeters/perims_2024_clipped_3005.shp
     perims_2025: processed_fire_perimeters/perims_2025_clipped_3005.shp
@@ -49,6 +52,8 @@ data:
 
   air_quality:
     aq_fort_nelson: air_quality/Fort_Nelson_Region_AQ_2019-2026.csv
+
+  
 
 #  Intermediate products (01_sdd → 02_hotspots) 
 intermediate:
