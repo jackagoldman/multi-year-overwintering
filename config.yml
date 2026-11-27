@@ -23,9 +23,7 @@ data:
   fires:
     all_fires_processed: analysis/all_fires_processed.geojson
     all_hotspots:        analysis/all_hotspots_2023_2025_night_nh.geojson
-    nbac_clipped: nbac_clipped/
-    nbac: nbac/
-
+   
   snow_dd:
     sdd_raster_2023: snow_dd/SDD_2023.tif
     sdd_raster_2024: snow_dd/SDD_2024.tif
