@@ -1,4 +1,4 @@
-# config.yml — Centralized path configuration for the detection algorithm
+# config.yml is a centralized path configuration for the detection algorithm workflow
 # Load this file at the top of each script before referencing any file paths.
 #
 # Python:  import yaml; cfg = yaml.safe_load(open('config.yml'))
@@ -25,6 +25,7 @@ data:
     all_hotspots:        analysis/all_hotspots_2023_2025_night_nh.geojson
 
   snow_dd:
+    sdd_raster_2023: snow_dd/SDD_2023.tif
     sdd_raster_2024: snow_dd/SDD_2024.tif
     sdd_raster_2025: snow_dd/SDD_2025.tif
 
@@ -45,6 +46,9 @@ data:
     study_zones: study_aoi/study_firezones.shp
     hist_fires: raw/BC_Fire_Perimeters_Historical/PROT_HISTORICAL_FIRE_POLYS_SP/H_FIRE_PLY_polygon.shp
     curr_fires: raw/BC_Fire_Perimeters_2025/PROT_CURRENT_FIRE_POLYS_SP/C_FIRE_PLY_polygon.shp
+
+  air_quality:
+    aq_fort_nelson: air_quality/Fort_Nelson_Region_AQ_2019-2026.csv
 
 #  Intermediate products (01_sdd → 02_hotspots) 
 intermediate:
@@ -89,3 +93,5 @@ params:
   sdd_window_max: 60        # days after SDD (upper bound)
   lightning_window_days: 7  # exclude hotspot if lightning within ±N days
   lightning_buffer_m: 2000  # search radius for lightning check (metres)
+
+
