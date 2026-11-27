@@ -1,6 +1,6 @@
 # Air quality analysis: seasonal PM2.5 trends in Fort Nelson region, 2019–2025
 # Author: Jack A. Goldman
-# Date: 2024-07-17
+# Date: 2026-07-17
 
 library(tidyverse)
 library(lubridate)
@@ -8,11 +8,24 @@ library(here)
 library(sf)
 library(exactextractr)
 library(ggplot2)
+library(yaml)
+library(viridis)
+library(patchwork)
+
+
+# set paths 
+cfg       <- yaml.load_file('config.yml')
+data_root <- cfg$environments[[cfg$environment]]$data_root
+project_root <- cfg$environments[[cfg$environment]]$project_root
+d <- function(subpath) file.path(data_root, subpath)
 
 # get sdd average in Fort Nelson for 2023
-sdd_23 <- raster::raster("/Volumes/top-secret/PostDoc/multi-year-overwintering/data/snow_dd/SDD_2023.tif")
+sdd_23 <- raster::raster(d(cfg$data$snow_dd$sdd_raster_2023))
 # for nelson
-nelson_sf <- st_read("/Volumes/top-secret/PostDoc/multi-year-overwintering/data/study_aoi/study_firezones.shp") |> st_transform(st_crs(sdd_23)) |> dplyr::filter(MFFRZNNM == "Fort Nelson Fire Zone")
+nelson_sf <- st_read(d(cfg$data$plotting$study_zones), quiet = TRUE) |> 
+  st_transform(st_crs(sdd_23)) |> 
+  dplyr::filter(MFFRZNNM == "Fort Nelson Fire Zone")
+
 # calculate average mean SDD in nelson
 nelson_sdd_23 <- exact_extract(sdd_23, nelson_sf, 'mean')
 
@@ -110,22 +123,13 @@ p1 <- ggplot(
 p1
 
 
-ggsave('air_quality/pm25_seasonal_timeseries.png', p1, width = 10, height = 5, dpi = 300)
+ggsave('air_quality/plots/pm25_seasonal_timeseries.png', p1, width = 10, height = 5, dpi = 300)
 
 
 
 
 
 #  Plot 2: Grouped bar chart: mean PM2.5 by year, bars coloured by season 
-
-
-season_cols <- c(
-  'Winter' = '#fee090',
-  'Spring' = '#f46d43',
-  'Summer' = '#d73027',
-  'Fall'   = '#a50026'
-)
-library(viridis)
 season_cols <- setNames(viridis(4, option = "mako"), c("Winter", "Spring", "Summer", "Fall"))
 
 p2 <- ggplot(dplyr::filter(desc_stats, Year != 2019), aes(x = Year, y = mean, fill = Season)) +
@@ -144,15 +148,14 @@ p2 <- ggplot(dplyr::filter(desc_stats, Year != 2019), aes(x = Year, y = mean, fi
     legend.position  = 'right'
   )
 
-ggsave('air_quality/pm25_seasonal_barplot.png', p2, width = 10, height = 5, dpi = 300)
+ggsave('air_quality/plots/pm25_seasonal_barplot.png', p2, width = 10, height = 5, dpi = 300)
 
 
 # patchwork p1 and p2
-library(patchwork)
 p_combined <- p1 / p2 + plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(face = 'bold', size = 14))
 p_combined
 
-ggsave('air_quality/pm25_grouped_timeseries_barplot.png', p_combined, width = 10, height = 10, dpi = 300)
+ggsave('air_quality/plots/pm25_grouped_timeseries_barplot.png', p_combined, width = 10, height = 10, dpi = 300)
 
 
 
