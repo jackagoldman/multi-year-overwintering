@@ -50,6 +50,13 @@ Download the datasets listed in `supplementary/datasets_used.md` and place them 
 | CLDN cloud-to-ground lightning 2024–2025 (NetCDF)                   | `data.lightning`                                      |
 | Road network clipped to the study zones, EPSG:3005                   | `data.roads.roads_study_zones`                        |
 
+#### Datasets to download
+
+These two datasets are not included in the repository and must be downloaded:
+
+- **CLDN lightning (CanCPLD v1)**: download `cg_flashes_3hr_0.1-deg_2024.nc` and `cg_flashes_3hr_0.1-deg_2025.nc` from https://crd-data-donnees-rdc.ec.gc.ca/CDAS/products/CanCPLD/CLDN/cg/ and save them to `raw/lightning/` (`data.lightning`). Dataset page: https://open.canada.ca/data/en/dataset/9a68a501-9a87-441a-8073-980ae68438ef (Open Government Licence – Canada; Cannon et al. 2025, *Scientific Data*).
+- **Digital Road Atlas (DRA)**: download from https://catalogue.data.gov.bc.ca/dataset/digital-road-atlas-dra-master-partially-attributed-roads (Open Government Licence – British Columbia). Clip to the study zones (`data.plotting.study_zones`), keep the `RD_CLASS` field, reproject to EPSG:3005, and save as `roads_study_zones_3005.geojson` (`data.roads.roads_study_zones`).
+
 ## Running the workflow
 
 Run every script from the project root, since scripts open `config.yml` relative to the working directory:
@@ -63,8 +70,8 @@ uvr run detection_algorithm/02_hotspotsb.R
 
 | Step                    | Script                 | Requires                                                 | Produces                                                                                                |
 | ----------------------- | ---------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Hotspots to GeoJSON (run first) | `prep/hotspots_to_geojson.py` | `data/hotspots/all_hotspots_2023_2025_night_nh.parquet` | `data.fires.all_hotspots` (GeoJSON read by steps 02, 06a, 06b). Hotspots are stored as GeoParquet because the GeoJSON is too large for GitHub. |
 | Snow disappearance date | `prep/sdd_acq.ipynb` | Earth Engine account and project ID; study area boundary | Annual MODIS SDD rasters, exported to Google Drive (`SDDperYear`). Download them to `data.snow_dd`. |
-|                         |                        |                                                          |                                                                                                         |
 
 ### Detection algorithm
 
